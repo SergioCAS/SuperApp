@@ -1,0 +1,35 @@
+{
+  "cli": {
+    "version": ">= 10.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyADonjEPtp1FJqq0ASPKRGKwE1EsqfYEYs",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "lista-del-super-f9bcd.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "lista-del-super-f9bcd",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "lista-del-super-f9bcd.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "17569539196",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:17569539196:web:da1a3bfe5d37ecf55b55f9"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyADonjEPtp1FJqq0ASPKRGKwE1EsqfYEYs",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "lista-del-super-f9bcd.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "lista-del-super-f9bcd",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "lista-del-super-f9bcd.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "17569539196",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:17569539196:web:da1a3bfe5d37ecf55b55f9"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  }
+}

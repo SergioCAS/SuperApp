@@ -1,0 +1,208 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isApproved() {
+      return isSignedIn() && userDoc().data.approved == true;
+    }
+
+    function isAdmin() {
+      return isApproved() && userDoc().data.role == "admin";
+    }
+
+    function sameHousehold(householdId) {
+      return isApproved() && userDoc().data.householdId == householdId;
+    }
+
+    function validUserCreate(uid) {
+      return request.resource.data.uid == uid &&
+        (!request.resource.data.keys().hasAny(["email"]) || isNonEmptyString(request.resource.data.email)) &&
+        (!request.resource.data.keys().hasAny(["displayName"]) || isNonEmptyString(request.resource.data.displayName)) &&
+        (!request.resource.data.keys().hasAny(["role"]) || request.resource.data.role == "member") &&
+        (!request.resource.data.keys().hasAny(["approved"]) || request.resource.data.approved == false) &&
+        (!request.resource.data.keys().hasAny(["householdId"]) || isNonEmptyString(request.resource.data.householdId)) &&
+        (!request.resource.data.keys().hasAny(["createdAt"]) || request.resource.data.createdAt is timestamp);
+    }
+
+    function selfUserUpdateIsSafe() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(["displayName"]) &&
+        isNonEmptyString(request.resource.data.displayName);
+    }
+
+    function validHouseholdCreate() {
+      return request.resource.data.keys().hasAll(["name", "createdByUid", "createdAt"]) &&
+        request.resource.data.keys().hasOnly(["name", "createdByUid", "createdAt"]) &&
+        isNonEmptyString(request.resource.data.name) &&
+        request.resource.data.createdByUid == request.auth.uid &&
+        request.resource.data.createdAt is timestamp;
+    }
+
+    function validHouseholdUpdate() {
+      return request.resource.data.keys().hasAll(["name", "createdByUid", "createdAt"]) &&
+        request.resource.data.keys().hasOnly(["name", "createdByUid", "createdAt"]) &&
+        isNonEmptyString(request.resource.data.name) &&
+        resource.data.createdByUid == request.resource.data.createdByUid &&
+        request.resource.data.createdAt is timestamp;
+    }
+
+    function validListItemData() {
+      return request.resource.data.keys().hasAll(["name", "normalizedName", "quantity", "addedByUid", "createdAt", "updatedAt"]) &&
+        request.resource.data.keys().hasOnly([
+          "name", "normalizedName", "quantity", "unit", "estimatedPrice", "estimatedUnitPrice", "addedByUid", "createdAt", "updatedAt"
+        ]) &&
+        isNonEmptyString(request.resource.data.name) &&
+        isNonEmptyString(request.resource.data.normalizedName) &&
+        request.resource.data.quantity is number &&
+        request.resource.data.quantity > 0 &&
+        request.resource.data.addedByUid is string &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        (!request.resource.data.keys().hasAny(["unit"]) || isNonEmptyString(request.resource.data.unit)) &&
+        (!request.resource.data.keys().hasAny(["estimatedPrice"]) || (request.resource.data.estimatedPrice is number && request.resource.data.estimatedPrice >= 0)) &&
+        (!request.resource.data.keys().hasAny(["estimatedUnitPrice"]) || (request.resource.data.estimatedUnitPrice is number && request.resource.data.estimatedUnitPrice >= 0));
+    }
+
+    function validPurchaseData() {
+      return request.resource.data.keys().hasAll([
+          "name", "normalizedName", "quantity", "pricePaid", "unitPricePaid", "storeId", "storeName", "purchasedByUid", "purchasedAt"
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          "listItemId", "name", "normalizedName", "quantity", "unit", "pricePaid", "unitPricePaid", "storeId", "storeName",
+          "purchasedByUid", "purchasedAt", "seasonId"
+        ]) &&
+        isNonEmptyString(request.resource.data.name) &&
+        isNonEmptyString(request.resource.data.normalizedName) &&
+        request.resource.data.quantity is number &&
+        request.resource.data.quantity > 0 &&
+        request.resource.data.pricePaid is number &&
+        request.resource.data.pricePaid >= 0 &&
+        request.resource.data.unitPricePaid is number &&
+        request.resource.data.unitPricePaid >= 0 &&
+        isNonEmptyString(request.resource.data.storeId) &&
+        isNonEmptyString(request.resource.data.storeName) &&
+        request.resource.data.purchasedByUid is string &&
+        request.resource.data.purchasedAt is timestamp &&
+        (!request.resource.data.keys().hasAny(["unit"]) || isNonEmptyString(request.resource.data.unit)) &&
+        (!request.resource.data.keys().hasAny(["listItemId"]) || isNonEmptyString(request.resource.data.listItemId)) &&
+        (!request.resource.data.keys().hasAny(["seasonId"]) || isNonEmptyString(request.resource.data.seasonId));
+    }
+
+    function validProductCatalogData() {
+      return request.resource.data.keys().hasAll(["name", "normalizedName", "lastUsedAt"]) &&
+        request.resource.data.keys().hasOnly(["name", "normalizedName", "lastUsedAt"]) &&
+        isNonEmptyString(request.resource.data.name) &&
+        isNonEmptyString(request.resource.data.normalizedName) &&
+        request.resource.data.lastUsedAt is timestamp;
+    }
+
+    function validStoreCatalogData() {
+      return request.resource.data.keys().hasAll(["name", "normalizedName", "createdAt", "lastUsedAt"]) &&
+        request.resource.data.keys().hasOnly(["name", "normalizedName", "createdAt", "lastUsedAt"]) &&
+        isNonEmptyString(request.resource.data.name) &&
+        isNonEmptyString(request.resource.data.normalizedName) &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.lastUsedAt is timestamp;
+    }
+
+    function validSeasonData() {
+      return request.resource.data.keys().hasAll(["name", "startMonth", "startDay", "endMonth", "endDay", "active"]) &&
+        request.resource.data.keys().hasOnly(["name", "startMonth", "startDay", "endMonth", "endDay", "active"]) &&
+        isNonEmptyString(request.resource.data.name) &&
+        request.resource.data.startMonth is number &&
+        request.resource.data.startMonth >= 1 &&
+        request.resource.data.startMonth <= 12 &&
+        request.resource.data.startDay is number &&
+        request.resource.data.startDay >= 1 &&
+        request.resource.data.startDay <= 31 &&
+        request.resource.data.endMonth is number &&
+        request.resource.data.endMonth >= 1 &&
+        request.resource.data.endMonth <= 12 &&
+        request.resource.data.endDay is number &&
+        request.resource.data.endDay >= 1 &&
+        request.resource.data.endDay <= 31 &&
+        request.resource.data.active is bool;
+    }
+
+    function validActivityData() {
+      return request.resource.data.keys().hasAll(["type", "itemName", "actorUid", "actorName", "createdAt"]) &&
+        request.resource.data.keys().hasOnly(["type", "itemName", "actorUid", "actorName", "createdAt"]) &&
+        request.resource.data.type in ["added", "supplied"] &&
+        isNonEmptyString(request.resource.data.itemName) &&
+        request.resource.data.actorUid is string &&
+        isNonEmptyString(request.resource.data.actorName) &&
+        request.resource.data.createdAt is timestamp;
+    }
+
+    match /users/{uid} {
+      allow create: if isSelf(uid) && validUserCreate(uid);
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow update: if isSignedIn() && (
+        (isSelf(uid) && selfUserUpdateIsSafe()) ||
+        isAdmin()
+      );
+      allow delete: if false;
+    }
+
+    match /households/{householdId} {
+      allow read: if sameHousehold(householdId);
+      allow create: if isApproved() && validHouseholdCreate();
+      allow update: if isAdmin() && validHouseholdUpdate();
+      allow delete: if isAdmin();
+
+      match /list_items/{itemId} {
+        allow read: if sameHousehold(householdId);
+        allow create: if sameHousehold(householdId) && validListItemData() && request.resource.data.addedByUid == request.auth.uid;
+        allow update: if sameHousehold(householdId) && validListItemData() && request.resource.data.addedByUid == resource.data.addedByUid;
+        allow delete: if sameHousehold(householdId);
+      }
+
+      match /purchases/{purchaseId} {
+        allow read: if sameHousehold(householdId);
+        allow create: if sameHousehold(householdId) && validPurchaseData() && request.resource.data.purchasedByUid == request.auth.uid;
+        allow update: if isAdmin() && validPurchaseData();
+        allow delete: if isAdmin();
+      }
+
+      match /products_catalog/{productId} {
+        allow read: if sameHousehold(householdId);
+        allow create, update: if sameHousehold(householdId) && validProductCatalogData();
+        allow delete: if isAdmin();
+      }
+
+      match /stores_catalog/{storeId} {
+        allow read: if sameHousehold(householdId);
+        allow create, update: if sameHousehold(householdId) && validStoreCatalogData();
+        allow delete: if isAdmin();
+      }
+
+      match /seasons/{seasonId} {
+        allow read: if sameHousehold(householdId);
+        allow create, update: if isAdmin() && validSeasonData();
+        allow delete: if isAdmin();
+      }
+
+      match /activity/{activityId} {
+        allow read: if sameHousehold(householdId);
+        allow create: if sameHousehold(householdId) &&
+          validActivityData() &&
+          request.resource.data.actorUid == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+  }
+}

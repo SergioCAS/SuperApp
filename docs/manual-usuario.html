@@ -1,0 +1,215 @@
+<h1 id="manual-de-usuario---super-app">Manual de Usuario - Super
+App</h1>
+<h2 id="objetivo">1. Objetivo</h2>
+<p>Super App ayuda a gestionar compras del hogar en tiempo real: - Crear
+y compartir una lista de artículos pendientes. - Marcar artículos como
+surtidos con tienda y precio real. - Consultar reportes de gasto y
+precios. - Administrar usuarios (solo perfil admin).</p>
+<h2 id="requisitos-para-usar-la-app">2. Requisitos para usar la app</h2>
+<ul>
+<li>Tener una cuenta registrada con correo y contraseña.</li>
+<li>Estar asignado a un hogar (<code>householdId</code>) en el
+perfil.</li>
+<li>En caso de usuarios nuevos: esperar aprobación de un
+administrador.</li>
+</ul>
+<h2 id="inicio-de-sesión-y-registro">3. Inicio de sesión y registro</h2>
+<p>Pantalla: <code>Acceso</code></p>
+<h3 id="registro">Registro</h3>
+<ol type="1">
+<li>Toca <code>Registrarme</code>.</li>
+<li>Captura <code>Nombre</code>, <code>Correo</code> y
+<code>Contraseña</code>.</li>
+<li>Toca <code>Crear cuenta</code>.</li>
+<li>La cuenta queda creada con estado pendiente de aprobación.</li>
+</ol>
+<h3 id="inicio-de-sesión">Inicio de sesión</h3>
+<ol type="1">
+<li>Toca <code>Iniciar sesión</code>.</li>
+<li>Captura correo y contraseña.</li>
+<li>Toca <code>Entrar</code>.</li>
+</ol>
+<h3 id="cerrar-sesión">Cerrar sesión</h3>
+<ul>
+<li>En la misma pantalla <code>Acceso</code>, usa
+<code>Cerrar sesión</code>.</li>
+</ul>
+<h2 id="estado-pendiente-de-aprobación">4. Estado pendiente de
+aprobación</h2>
+<p>Pantalla: <code>Pendiente de aprobación</code></p>
+<p>Si aparece este mensaje, significa que tu cuenta existe pero un admin
+aún no la habilita. - Cuando el admin active
+<code>approved = true</code>, tendrás acceso automáticamente. - Puedes
+usar el botón <code>Cerrar sesión</code>.</p>
+<h2 id="pantalla-inicio">5. Pantalla Inicio</h2>
+<p>Pantalla: <code>Inicio</code></p>
+<p>Desde aquí se accede a: - <code>Lista</code> - <code>Acceso</code> -
+<code>Tiendas</code> - <code>Épocas</code> - <code>Reportes</code> -
+<code>Administrar usuarios</code> (solo si eres admin) -
+<code>Estado Firebase</code></p>
+<h2 id="lista-compartida-uso-diario">6. Lista compartida (uso
+diario)</h2>
+<p>Pantalla: <code>Lista de compras</code></p>
+<h3 id="agregar-artículo">Agregar artículo</h3>
+<ol type="1">
+<li>En <code>Agregar artículo</code>, captura:</li>
+</ol>
+<ul>
+<li>Nombre del artículo.</li>
+<li>Cantidad.</li>
+<li>Precio estimado (opcional).</li>
+</ul>
+<ol start="2" type="1">
+<li>Toca <code>Agregar</code>.</li>
+</ol>
+<h3 id="sugerencias-y-prevención-de-duplicados">Sugerencias y prevención
+de duplicados</h3>
+<ul>
+<li>Al escribir, se muestran sugerencias de artículos pendientes y ya
+surtidos.</li>
+<li>Si detecta duplicado, muestra opciones:</li>
+<li><code>Editar pendiente</code></li>
+<li><code>Surtir ahora</code></li>
+</ul>
+<h3 id="editar-artículo-pendiente">Editar artículo pendiente</h3>
+<ul>
+<li>Puedes editar de dos formas:</li>
+<li>Botón <code>Editar</code> en cada tarjeta.</li>
+<li>Desde la alerta de duplicado.</li>
+<li>La app te desplaza al formulario para ver claramente la
+edición.</li>
+<li>Guarda con <code>Guardar cambios</code> o cancela con
+<code>Cancelar edición</code>.</li>
+</ul>
+<h3 id="surtir-artículo">Surtir artículo</h3>
+<ol type="1">
+<li>Toca <code>Surtir</code> en el artículo.</li>
+<li>En modal <code>Registrar surtido</code>:</li>
+</ol>
+<ul>
+<li>Selecciona tienda.</li>
+<li>Captura precio pagado.</li>
+</ul>
+<ol start="3" type="1">
+<li>Toca <code>Confirmar</code>.</li>
+</ol>
+<p>Al surtir: - El artículo sale de pendientes. - Se registra en
+historial de compras. - Se calcula precio unitario. - Se asigna época
+automáticamente según fecha y catálogo de épocas.</p>
+<h3 id="actividad-reciente">Actividad reciente</h3>
+<ul>
+<li>Muestra eventos de artículos agregados/surtidos por usuarios del
+hogar.</li>
+<li>Usa <code>Ver más</code> para ampliar historial.</li>
+</ul>
+<h2 id="tiendas">7. Tiendas</h2>
+<p>Pantalla: <code>Tiendas</code></p>
+<h3 id="qué-puedes-hacer">Qué puedes hacer</h3>
+<ul>
+<li>Agregar tiendas al catálogo del hogar.</li>
+<li>Detectar nombres duplicados o muy parecidos.</li>
+<li>Resaltar y reutilizar tienda existente
+(<code>Usar existente</code>).</li>
+</ul>
+<h3 id="permisos">Permisos</h3>
+<ul>
+<li>Miembro: puede agregar.</li>
+<li>Admin: puede agregar, editar y eliminar.</li>
+</ul>
+<h2 id="épocas">8. Épocas</h2>
+<p>Pantalla: <code>Épocas recurrentes</code></p>
+<p>Las épocas permiten segmentar compras por temporada (ejemplo:
+Navidad).</p>
+<h3 id="crear-época">Crear época</h3>
+<ol type="1">
+<li>Captura nombre.</li>
+<li>Define mes/día de inicio y fin.</li>
+<li>Marca activa o inactiva.</li>
+<li>Guarda con <code>Guardar época</code>.</li>
+</ol>
+<h3 id="notas-importantes">Notas importantes</h3>
+<ul>
+<li>Puede cruzar año (ejemplo: 15/12 a 02/02).</li>
+<li>Detecta nombres similares para evitar duplicados.</li>
+</ul>
+<h3 id="permisos-1">Permisos</h3>
+<ul>
+<li>Solo admin puede crear, activar/desactivar o eliminar.</li>
+</ul>
+<h2 id="reportes">9. Reportes</h2>
+<p>Pantalla: <code>Reportes</code></p>
+<p>Incluye cinco bloques: 1. Artículos pendientes de surtir. 2.
+Artículos surtidos (filtros por fecha, tienda, época y artículo). 3.
+Tendencia de precios por artículo. 4. Tienda más barata (por compra más
+reciente). 5. Gasto por tienda y periodo.</p>
+<h3 id="funciones-clave">Funciones clave</h3>
+<ul>
+<li>Filtros por rango de fecha (<code>AAAA-MM-DD</code>).</li>
+<li>Autocompletado de artículos.</li>
+<li>Chips para filtrar por tienda y época.</li>
+<li>Resúmenes automáticos: totales, ticket promedio, participación por
+tienda.</li>
+</ul>
+<h2 id="administración-de-usuarios-solo-admin">10. Administración de
+usuarios (solo admin)</h2>
+<p>Pantalla: <code>Administrar usuarios</code></p>
+<h3 id="funciones">Funciones</h3>
+<ul>
+<li>Crear hogares.</li>
+<li>Aprobar/revocar usuarios.</li>
+<li>Cambiar rol (<code>member</code>/<code>admin</code>).</li>
+<li>Asignar o actualizar <code>householdId</code> por usuario.</li>
+</ul>
+<h3 id="requisito-para-entrar">Requisito para entrar</h3>
+<ul>
+<li>Tu perfil debe tener:</li>
+<li><code>role = admin</code></li>
+<li><code>approved = true</code></li>
+</ul>
+<h2 id="estado-firebase">11. Estado Firebase</h2>
+<p>Pantalla: <code>Estado Firebase</code></p>
+<p>Permite validar: - Variables públicas de Firebase. - Instancia de
+Firestore.</p>
+<p>Si algo está pendiente, corrige configuración antes de continuar.</p>
+<h2 id="recomendaciones-de-uso">12. Recomendaciones de uso</h2>
+<ul>
+<li>Usa nombres claros y consistentes para artículos.</li>
+<li>Captura precio estimado para mejorar planeación.</li>
+<li>Registra surtidos en el momento para mantener reportes
+correctos.</li>
+<li>Evita duplicar tiendas y épocas con nombres casi iguales.</li>
+<li>Revisa reportes semanalmente para detectar variaciones de
+precio.</li>
+</ul>
+<h2 id="problemas-frecuentes">13. Problemas frecuentes</h2>
+<h3 id="no-puedo-ver-artículos-ni-reportes">No puedo ver artículos ni
+reportes</h3>
+<ul>
+<li>Verifica que tu usuario tenga <code>householdId</code>
+asignado.</li>
+</ul>
+<h3 id="me-sale-cuenta-pendiente-de-aprobación">Me sale “Cuenta
+pendiente de aprobación”</h3>
+<ul>
+<li>Solicita a un admin que cambie <code>approved</code> a
+<code>true</code>.</li>
+</ul>
+<h3 id="no-puedo-editareliminar-tiendas-o-épocas">No puedo
+editar/eliminar tiendas o épocas</h3>
+<ul>
+<li>Esa acción requiere rol admin.</li>
+</ul>
+<h3 id="un-botón-no-responde-al-primer-toque">Un botón no responde al
+primer toque</h3>
+<ul>
+<li>Cierra teclado y vuelve a intentar.</li>
+<li>Si persiste, reinicia la app.</li>
+</ul>
+<h2 id="glosario-rápido">14. Glosario rápido</h2>
+<ul>
+<li><code>Pendiente</code>: artículo aún no comprado.</li>
+<li><code>Surtido</code>: artículo ya comprado y registrado.</li>
+<li><code>Hogar</code>: grupo compartido de usuarios y datos.</li>
+<li><code>Época</code>: temporada recurrente para clasificar
+compras.</li>
+</ul>
