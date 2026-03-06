@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../src/config/firebase";
+import { auth, db, firebaseBootError } from "../src/config/firebase";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -13,6 +13,11 @@ export default function RootLayout() {
   const [isApproved, setIsApproved] = useState(false);
 
   useEffect(() => {
+    if (firebaseBootError) {
+      setBooting(false);
+      return;
+    }
+
     let userUnsubscribe: (() => void) | undefined;
 
     const authUnsubscribe = onAuthStateChanged(auth, (user) => {
@@ -87,6 +92,20 @@ export default function RootLayout() {
     );
   }
 
+  if (firebaseBootError) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <Text style={styles.errorTitle}>No se pudo iniciar Firebase</Text>
+          <Text style={styles.errorText}>{firebaseBootError}</Text>
+          <Pressable onPress={() => router.replace("/health")} style={styles.errorButton}>
+            <Text style={styles.errorButtonText}>Abrir diagnóstico</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <Stack
       screenOptions={{
@@ -118,5 +137,26 @@ const styles = StyleSheet.create({
   text: {
     color: "#334155",
     fontWeight: "600"
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#991b1b",
+    textAlign: "center"
+  },
+  errorText: {
+    color: "#334155",
+    textAlign: "center"
+  },
+  errorButton: {
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#0f766e",
+    borderRadius: 8
+  },
+  errorButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
   }
 });
