@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -20,7 +20,16 @@ if (hasMissingConfig()) {
   console.warn("Firebase config incompleta. Revisa mobile/.env");
 }
 
-const app = initializeApp(firebaseConfig);
+export let auth!: Auth;
+export let db!: Firestore;
+export let firebaseBootError: string | null = null;
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+try {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error) {
+  const message = error instanceof Error ? error.message : "Error desconocido al iniciar Firebase";
+  firebaseBootError = message;
+  console.error("No se pudo iniciar Firebase:", message);
+}
