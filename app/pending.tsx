@@ -44,7 +44,6 @@ export default function PendingApprovalScreen() {
         </Text>
 
         {errorText ? <Text style={styles.error}>{errorText}</Text> : null}
-
         <Pressable
           onPress={handleLogout}
           disabled={busy}
