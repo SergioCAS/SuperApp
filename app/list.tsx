@@ -1,18 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Stack } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Stack, useFocusEffect } from "expo-router";
 import {
   ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import {
   Timestamp,
@@ -38,6 +37,8 @@ type ListItemView = {
   quantity: number;
   estimatedPrice?: number;
   estimatedUnitPrice?: number;
+  preferredStoreId?: string;
+  preferredStoreName?: string;
   addedByUid: string;
   createdAt?: Timestamp;
 };
@@ -81,6 +82,8 @@ type NameSuggestion = {
   pendingItemId?: string;
   lastQuantity?: number;
   lastPricePaid?: number;
+  lastStoreId?: string;
+  lastStoreName?: string;
 };
 
 type PurchaseHistoryHint = {
@@ -88,13 +91,49 @@ type PurchaseHistoryHint = {
   normalizedName: string;
   quantity?: number;
   pricePaid?: number;
+  storeId?: string;
+  storeName?: string;
 };
+
+type PurchaseHistoryEntry = {
+  id: string;
+  name: string;
+  normalizedName: string;
+  quantity: number;
+  pricePaid?: number;
+  storeId?: string;
+  storeName?: string;
+  purchasedAt?: Timestamp;
+};
+
+type RestockCandidate = {
+  key: string;
+  name: string;
+  normalizedName: string;
+  quantity: number;
+  lastPricePaid?: number;
+  lastStoreId?: string;
+  lastStoreName?: string;
+  purchasedAt?: Timestamp;
+};
+
+type ReadScope =
+  | "profile"
+  | "list_items"
+  | "stores_catalog"
+  | "seasons"
+  | "purchases"
+  | "activity";
 
 function asTextError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
   }
   return "Ocurrió un error inesperado.";
+}
+
+function asReadError(scopeLabel: string, error: unknown) {
+  return `No se pudo cargar ${scopeLabel}: ${asTextError(error)}`;
 }
 
 function normalizeName(value: string) {
@@ -177,6 +216,7 @@ export default function ListScreen() {
   const [stores, setStores] = useState<StoreOption[]>([]);
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
   const [purchaseNames, setPurchaseNames] = useState<PurchaseHistoryHint[]>([]);
+  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseHistoryEntry[]>([]);
 
   const [events, setEvents] = useState<ActivityEventView[]>([]);
   const [eventNotice, setEventNotice] = useState("");
@@ -192,14 +232,43 @@ export default function ListScreen() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [selectedPendingSuggestionId, setSelectedPendingSuggestionId] = useState<string | null>(null);
   const [prefillHintText, setPrefillHintText] = useState("");
+  const [preferredStoreIdDraft, setPreferredStoreIdDraft] = useState("");
+  const [preferredStoreNameDraft, setPreferredStoreNameDraft] = useState("");
 
   const [busy, setBusy] = useState(false);
   const [errorText, setErrorText] = useState("");
+  const [infoText, setInfoText] = useState("");
+  const [readErrors, setReadErrors] = useState<Record<ReadScope, string>>({
+    profile: "",
+    list_items: "",
+    stores_catalog: "",
+    seasons: "",
+    purchases: "",
+    activity: ""
+  });
 
   const [supplyItem, setSupplyItem] = useState<ListItemView | null>(null);
   const [supplyStoreId, setSupplyStoreId] = useState("");
   const [supplyStoreQuery, setSupplyStoreQuery] = useState("");
   const [supplyPricePaid, setSupplyPricePaid] = useState("");
+  const [restockVisible, setRestockVisible] = useState(false);
+  const [restockSearch, setRestockSearch] = useState("");
+  const [restockSelectedKeys, setRestockSelectedKeys] = useState<string[]>([]);
+  const [restockModeVisible, setRestockModeVisible] = useState(false);
+  const [recentlyRestockedIds, setRecentlyRestockedIds] = useState<string[]>([]);
+  const readErrorText = useMemo(() => {
+    return Object.values(readErrors)
+      .filter(Boolean)
+      .join("\n");
+  }, [readErrors]);
+
+  function clearReadError(scope: ReadScope) {
+    setReadErrors((prev) => ({ ...prev, [scope]: "" }));
+  }
+
+  function setReadError(scope: ReadScope, message: string) {
+    setReadErrors((prev) => ({ ...prev, [scope]: message }));
+  }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -212,6 +281,7 @@ export default function ListScreen() {
     if (!currentUser) {
       setProfile(null);
       setLoadingProfile(false);
+      clearReadError("profile");
       return;
     }
     setLoadingProfile(true);
@@ -221,10 +291,12 @@ export default function ListScreen() {
       (snap) => {
         setProfile((snap.data() as UserProfile | undefined) ?? null);
         setLoadingProfile(false);
+        clearReadError("profile");
       },
-      () => {
+      (error) => {
         setProfile(null);
         setLoadingProfile(false);
+        setReadError("profile", asReadError("tu perfil de usuario", error));
       }
     );
     return unsubscribe;
@@ -236,6 +308,7 @@ export default function ListScreen() {
     if (!householdId) {
       setItems([]);
       setLoadingItems(false);
+      clearReadError("list_items");
       return;
     }
     setLoadingItems(true);
@@ -255,16 +328,22 @@ export default function ListScreen() {
               typeof data.estimatedPrice === "number" ? data.estimatedPrice : undefined,
             estimatedUnitPrice:
               typeof data.estimatedUnitPrice === "number" ? data.estimatedUnitPrice : undefined,
+            preferredStoreId:
+              typeof data.preferredStoreId === "string" ? data.preferredStoreId : undefined,
+            preferredStoreName:
+              typeof data.preferredStoreName === "string" ? data.preferredStoreName : undefined,
             addedByUid: String(data.addedByUid ?? ""),
             createdAt: data.createdAt as Timestamp | undefined
           };
         });
         setItems(nextItems);
         setLoadingItems(false);
+        clearReadError("list_items");
       },
-      () => {
+      (error) => {
         setItems([]);
         setLoadingItems(false);
+        setReadError("list_items", asReadError("la lista de artículos pendientes", error));
       }
     );
     return unsubscribe;
@@ -275,59 +354,101 @@ export default function ListScreen() {
       setStores([]);
       setSeasons([]);
       setPurchaseNames([]);
+      setPurchaseHistory([]);
+      clearReadError("stores_catalog");
+      clearReadError("seasons");
+      clearReadError("purchases");
       return;
     }
 
     const storesRef = collection(db, "households", householdId, "stores_catalog");
     const storesQuery = query(storesRef, orderBy("normalizedName", "asc"));
-    const unsubscribeStores = onSnapshot(storesQuery, (snap) => {
-      setStores(
-        snap.docs.map((storeDoc) => ({
-          id: storeDoc.id,
-          name: String(storeDoc.data().name ?? "")
-        }))
-      );
-    });
+    const unsubscribeStores = onSnapshot(
+      storesQuery,
+      (snap) => {
+        setStores(
+          snap.docs.map((storeDoc) => ({
+            id: storeDoc.id,
+            name: String(storeDoc.data().name ?? "")
+          }))
+        );
+        clearReadError("stores_catalog");
+      },
+      (error) => {
+        setStores([]);
+        setReadError("stores_catalog", asReadError("el catálogo de tiendas", error));
+      }
+    );
 
     const seasonsRef = collection(db, "households", householdId, "seasons");
     const seasonsQuery = query(seasonsRef, orderBy("startMonth", "asc"));
-    const unsubscribeSeasons = onSnapshot(seasonsQuery, (snap) => {
-      const nextSeasons = snap.docs
-        .map((seasonDoc) => {
-          const data = seasonDoc.data();
-          return {
-            id: seasonDoc.id,
-            name: String(data.name ?? ""),
-            startMonth: Number(data.startMonth ?? 0),
-            startDay: Number(data.startDay ?? 0),
-            endMonth: Number(data.endMonth ?? 0),
-            endDay: Number(data.endDay ?? 0),
-            active: Boolean(data.active)
-          };
-        })
-        .sort(
-          (a, b) =>
-            monthDayValue(a.startMonth, a.startDay) - monthDayValue(b.startMonth, b.startDay)
-        );
-      setSeasons(nextSeasons);
-    });
+    const unsubscribeSeasons = onSnapshot(
+      seasonsQuery,
+      (snap) => {
+        const nextSeasons = snap.docs
+          .map((seasonDoc) => {
+            const data = seasonDoc.data();
+            return {
+              id: seasonDoc.id,
+              name: String(data.name ?? ""),
+              startMonth: Number(data.startMonth ?? 0),
+              startDay: Number(data.startDay ?? 0),
+              endMonth: Number(data.endMonth ?? 0),
+              endDay: Number(data.endDay ?? 0),
+              active: Boolean(data.active)
+            };
+          })
+          .sort(
+            (a, b) =>
+              monthDayValue(a.startMonth, a.startDay) - monthDayValue(b.startMonth, b.startDay)
+          );
+        setSeasons(nextSeasons);
+        clearReadError("seasons");
+      },
+      (error) => {
+        setSeasons([]);
+        setReadError("seasons", asReadError("las épocas configuradas", error));
+      }
+    );
 
     const purchasesRef = collection(db, "households", householdId, "purchases");
-    const purchasesQuery = query(purchasesRef, orderBy("purchasedAt", "desc"), limit(100));
-    const unsubscribePurchases = onSnapshot(purchasesQuery, (snap) => {
-      setPurchaseNames(
-        snap.docs.map((purchaseDoc) => {
+    const purchasesQuery = query(purchasesRef, orderBy("purchasedAt", "desc"), limit(250));
+    const unsubscribePurchases = onSnapshot(
+      purchasesQuery,
+      (snap) => {
+        const nextHistory = snap.docs.map((purchaseDoc) => {
           const data = purchaseDoc.data();
           const itemName = String(data.name ?? "");
           return {
+            id: purchaseDoc.id,
             name: itemName,
             normalizedName: String(data.normalizedName ?? normalizeName(itemName)),
-            quantity: typeof data.quantity === "number" ? data.quantity : undefined,
-            pricePaid: typeof data.pricePaid === "number" ? data.pricePaid : undefined
-          };
-        })
-      );
-    });
+            quantity: typeof data.quantity === "number" && data.quantity > 0 ? data.quantity : 1,
+            pricePaid: typeof data.pricePaid === "number" ? data.pricePaid : undefined,
+            storeId: typeof data.storeId === "string" ? data.storeId : undefined,
+            storeName: typeof data.storeName === "string" ? data.storeName : undefined,
+            purchasedAt: data.purchasedAt as Timestamp | undefined
+          } satisfies PurchaseHistoryEntry;
+        });
+        setPurchaseHistory(nextHistory);
+        setPurchaseNames(
+          nextHistory.map((purchase) => ({
+            name: purchase.name,
+            normalizedName: purchase.normalizedName,
+            quantity: purchase.quantity,
+            pricePaid: purchase.pricePaid,
+            storeId: purchase.storeId,
+            storeName: purchase.storeName
+          }))
+        );
+        clearReadError("purchases");
+      },
+      (error) => {
+        setPurchaseHistory([]);
+        setPurchaseNames([]);
+        setReadError("purchases", asReadError("el historial de compras", error));
+      }
+    );
 
     return () => {
       unsubscribeStores();
@@ -342,44 +463,53 @@ export default function ListScreen() {
       setEventNotice("");
       didLoadEventsRef.current = false;
       latestEventRef.current = "";
+      clearReadError("activity");
       return;
     }
 
     const activityRef = collection(db, "households", householdId, "activity");
     const q = query(activityRef, orderBy("createdAt", "desc"), limit(12));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const nextEvents = snap.docs.map((eventDoc) => {
-        const data = eventDoc.data();
-        return {
-          id: eventDoc.id,
-          type: data.type === "supplied" ? "supplied" : "added",
-          itemName: String(data.itemName ?? ""),
-          actorUid: String(data.actorUid ?? ""),
-          actorName: String(data.actorName ?? "Alguien"),
-          createdAt: data.createdAt as Timestamp | undefined
-        } satisfies ActivityEventView;
-      });
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        const nextEvents = snap.docs.map((eventDoc) => {
+          const data = eventDoc.data();
+          return {
+            id: eventDoc.id,
+            type: data.type === "supplied" ? "supplied" : "added",
+            itemName: String(data.itemName ?? ""),
+            actorUid: String(data.actorUid ?? ""),
+            actorName: String(data.actorName ?? "Alguien"),
+            createdAt: data.createdAt as Timestamp | undefined
+          } satisfies ActivityEventView;
+        });
 
-      setEvents(nextEvents);
-      const newest = nextEvents[0];
-      if (!newest) {
-        return;
-      }
-
-      if (!didLoadEventsRef.current) {
-        didLoadEventsRef.current = true;
-        latestEventRef.current = newest.id;
-        return;
-      }
-
-      if (newest.id !== latestEventRef.current) {
-        latestEventRef.current = newest.id;
-        if (newest.actorUid !== currentUser?.uid) {
-          const action = newest.type === "added" ? "agregó" : "surtió";
-          setEventNotice(`${newest.actorName} ${action}: ${newest.itemName}`);
+        setEvents(nextEvents);
+        clearReadError("activity");
+        const newest = nextEvents[0];
+        if (!newest) {
+          return;
         }
+
+        if (!didLoadEventsRef.current) {
+          didLoadEventsRef.current = true;
+          latestEventRef.current = newest.id;
+          return;
+        }
+
+        if (newest.id !== latestEventRef.current) {
+          latestEventRef.current = newest.id;
+          if (newest.actorUid !== currentUser?.uid) {
+            const action = newest.type === "added" ? "agregó" : "surtió";
+            setEventNotice(`${newest.actorName} ${action}: ${newest.itemName}`);
+          }
+        }
+      },
+      (error) => {
+        setEvents([]);
+        setReadError("activity", asReadError("la actividad reciente", error));
       }
-    });
+    );
 
     return unsubscribe;
   }, [currentUser?.uid, householdId]);
@@ -393,6 +523,22 @@ export default function ListScreen() {
     }, 4500);
     return () => clearTimeout(timer);
   }, [eventNotice]);
+
+  useEffect(() => {
+    if (!infoText) {
+      return;
+    }
+    const timer = setTimeout(() => setInfoText(""), 5000);
+    return () => clearTimeout(timer);
+  }, [infoText]);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setRecentlyRestockedIds([]);
+      };
+    }, [])
+  );
 
   const normalizedInput = useMemo(() => normalizeName(name), [name]);
 
@@ -443,7 +589,9 @@ export default function ListScreen() {
           normalized: purchase.normalizedName,
           source: "supplied",
           lastQuantity: purchase.quantity,
-          lastPricePaid: purchase.pricePaid
+          lastPricePaid: purchase.pricePaid,
+          lastStoreId: purchase.storeId,
+          lastStoreName: purchase.storeName
         });
       }
     }
@@ -507,6 +655,39 @@ export default function ListScreen() {
     });
   }, [stores, supplyStoreId, supplyStoreQuery]);
 
+  const restockCandidates = useMemo(() => {
+    const map = new Map<string, RestockCandidate>();
+    for (const purchase of purchaseHistory) {
+      if (!purchase.normalizedName) {
+        continue;
+      }
+      if (!map.has(purchase.normalizedName)) {
+        map.set(purchase.normalizedName, {
+          key: purchase.normalizedName,
+          name: purchase.name,
+          normalizedName: purchase.normalizedName,
+          quantity: purchase.quantity > 0 ? purchase.quantity : 1,
+          lastPricePaid: purchase.pricePaid,
+          lastStoreId: purchase.storeId,
+          lastStoreName: purchase.storeName,
+          purchasedAt: purchase.purchasedAt
+        });
+      }
+    }
+    const text = normalizeName(restockSearch);
+    return Array.from(map.values())
+      .filter((candidate) =>
+        text ? candidate.normalizedName.includes(text) || normalizeName(candidate.name).includes(text) : true
+      )
+      .sort((a, b) => {
+        const ta = a.purchasedAt?.toMillis() ?? 0;
+        const tb = b.purchasedAt?.toMillis() ?? 0;
+        return tb - ta;
+      });
+  }, [purchaseHistory, restockSearch]);
+
+  const restockSelectedCount = restockSelectedKeys.length;
+
   async function addActivityEvent(
     homeId: string,
     eventType: ActivityEventType,
@@ -557,7 +738,9 @@ export default function ListScreen() {
             ...basePayload,
             estimatedPrice: priceValue !== undefined ? priceValue : deleteField(),
             estimatedUnitPrice:
-              priceValue !== undefined ? priceValue / quantityValue : deleteField()
+              priceValue !== undefined ? priceValue / quantityValue : deleteField(),
+            preferredStoreId: preferredStoreIdDraft || deleteField(),
+            preferredStoreName: preferredStoreNameDraft || deleteField()
           },
           { merge: true }
         );
@@ -577,7 +760,9 @@ export default function ListScreen() {
                 estimatedPrice: priceValue,
                 estimatedUnitPrice: priceValue / quantityValue
               }
-            : {})
+            : {}),
+          ...(preferredStoreIdDraft ? { preferredStoreId: preferredStoreIdDraft } : {}),
+          ...(preferredStoreNameDraft ? { preferredStoreName: preferredStoreNameDraft } : {})
         };
         const itemsRef = collection(db, "households", householdId, "list_items");
         await addDoc(itemsRef, payload);
@@ -591,6 +776,8 @@ export default function ListScreen() {
       setEditingItemId(null);
       setSelectedPendingSuggestionId(null);
       setPrefillHintText("");
+      setPreferredStoreIdDraft("");
+      setPreferredStoreNameDraft("");
 
       if (shouldLogAddedActivity) {
         // Si falla este registro no debe bloquear el alta del artículo.
@@ -620,6 +807,8 @@ export default function ListScreen() {
     setEditingItemId(item.id);
     setSelectedPendingSuggestionId(null);
     setPrefillHintText("");
+    setPreferredStoreIdDraft(item.preferredStoreId ?? "");
+    setPreferredStoreNameDraft(item.preferredStoreName ?? "");
   }
 
   function startEditingPendingItem(item: ListItemView) {
@@ -637,7 +826,11 @@ export default function ListScreen() {
         : ""
     );
     setSupplyStoreQuery("");
-    setSupplyStoreId(stores[0]?.id ?? "");
+    if (item.preferredStoreId && stores.some((store) => store.id === item.preferredStoreId)) {
+      setSupplyStoreId(item.preferredStoreId);
+    } else {
+      setSupplyStoreId(stores[0]?.id ?? "");
+    }
   }
 
   function closeSupplyModal() {
@@ -645,6 +838,95 @@ export default function ListScreen() {
     setSupplyStoreId("");
     setSupplyStoreQuery("");
     setSupplyPricePaid("");
+  }
+
+  function toggleRestockSelection(key: string) {
+    setRestockSelectedKeys((prev) => {
+      if (prev.includes(key)) {
+        return prev.filter((value) => value !== key);
+      }
+      return [...prev, key];
+    });
+  }
+
+  function openRestockSelector() {
+    setRestockVisible(true);
+    setRestockModeVisible(false);
+    setRestockSearch("");
+    setRestockSelectedKeys([]);
+  }
+
+  function closeRestockSelector() {
+    setRestockVisible(false);
+    setRestockModeVisible(false);
+    setRestockSearch("");
+    setRestockSelectedKeys([]);
+  }
+
+  async function addSelectedRestockItems(useLastPrice: boolean) {
+    if (!currentUser || !householdId || restockSelectedCount === 0) {
+      return;
+    }
+
+    const selectedSet = new Set(restockSelectedKeys);
+    const selected = restockCandidates.filter((candidate) => selectedSet.has(candidate.key));
+    if (selected.length === 0) {
+      setErrorText("Selecciona al menos un artículo para reponer.");
+      return;
+    }
+
+    setBusy(true);
+    setErrorText("");
+    setInfoText("");
+    try {
+      const existingPending = new Set(items.map((item) => item.normalizedName));
+      const itemsRef = collection(db, "households", householdId, "list_items");
+      const createdIds: string[] = [];
+      let skippedDuplicates = 0;
+
+      for (const candidate of selected) {
+        if (existingPending.has(candidate.normalizedName)) {
+          skippedDuplicates += 1;
+          continue;
+        }
+        const quantityValue = candidate.quantity > 0 ? candidate.quantity : 1;
+        const payload: Record<string, unknown> = {
+          name: candidate.name,
+          normalizedName: candidate.normalizedName,
+          quantity: quantityValue,
+          addedByUid: currentUser.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+        if (useLastPrice && typeof candidate.lastPricePaid === "number" && candidate.lastPricePaid >= 0) {
+          payload.estimatedPrice = candidate.lastPricePaid;
+          payload.estimatedUnitPrice = candidate.lastPricePaid / quantityValue;
+        }
+        if (candidate.lastStoreId) {
+          payload.preferredStoreId = candidate.lastStoreId;
+        }
+        if (candidate.lastStoreName) {
+          payload.preferredStoreName = candidate.lastStoreName;
+        }
+        const created = await addDoc(itemsRef, payload);
+        createdIds.push(created.id);
+        existingPending.add(candidate.normalizedName);
+      }
+
+      if (createdIds.length > 0) {
+        setRecentlyRestockedIds((prev) => [...prev, ...createdIds]);
+      }
+      setInfoText(
+        `Reposición lista: ${createdIds.length} agregado(s)${
+          skippedDuplicates > 0 ? `, ${skippedDuplicates} omitido(s) por duplicado` : ""
+        }.`
+      );
+      closeRestockSelector();
+    } catch (error) {
+      setErrorText(asTextError(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleConfirmSupply() {
@@ -776,6 +1058,8 @@ export default function ListScreen() {
                       setName(value);
                       setSelectedPendingSuggestionId(null);
                       setPrefillHintText("");
+                      setPreferredStoreIdDraft("");
+                      setPreferredStoreNameDraft("");
                     }}
                     style={styles.input}
                   />
@@ -791,6 +1075,8 @@ export default function ListScreen() {
                               setSelectedPendingSuggestionId(s.pendingItemId);
                               setEditingItemId(null);
                               setPrefillHintText("");
+                              setPreferredStoreIdDraft("");
+                              setPreferredStoreNameDraft("");
                             } else {
                               setSelectedPendingSuggestionId(null);
                               setEditingItemId(null);
@@ -804,6 +1090,8 @@ export default function ListScreen() {
                               } else {
                                 setEstimatedPrice("");
                               }
+                              setPreferredStoreIdDraft(s.lastStoreId ?? "");
+                              setPreferredStoreNameDraft(s.lastStoreName ?? "");
                               setPrefillHintText("Datos precargados desde última compra.");
                             }
                           }}
@@ -844,6 +1132,11 @@ export default function ListScreen() {
                   {prefillHintText ? (
                     <View style={styles.prefillHintCard}>
                       <Text style={styles.prefillHintText}>{prefillHintText}</Text>
+                      {preferredStoreNameDraft ? (
+                        <Text style={styles.prefillHintStoreText}>
+                          Tienda sugerida: {preferredStoreNameDraft}
+                        </Text>
+                      ) : null}
                     </View>
                   ) : null}
 
@@ -885,6 +1178,8 @@ export default function ListScreen() {
                           setEditingItemId(null);
                           setSelectedPendingSuggestionId(null);
                           setPrefillHintText("");
+                          setPreferredStoreIdDraft("");
+                          setPreferredStoreNameDraft("");
                           setName("");
                           setQuantity("");
                           setEstimatedPrice("");
@@ -895,6 +1190,23 @@ export default function ListScreen() {
                       </Pressable>
                     ) : null}
                   </View>
+                </View>
+
+                <View style={styles.restockCard}>
+                  <Text style={styles.restockTitle}>Reposición rápida</Text>
+                  <Text style={styles.restockText}>
+                    Reagrega artículos surtidos para comprarlos otra vez sin recapturar.
+                  </Text>
+                  <Pressable
+                    onPress={openRestockSelector}
+                    disabled={purchaseHistory.length === 0 || busy}
+                    style={[
+                      styles.restockButton,
+                      (purchaseHistory.length === 0 || busy) && styles.addButtonDisabled
+                    ]}
+                  >
+                    <Text style={styles.restockButtonText}>Reponer desde surtidos</Text>
+                  </Pressable>
                 </View>
 
                 <Pressable
@@ -921,7 +1233,9 @@ export default function ListScreen() {
                   )}
                 </Pressable>
 
+                {readErrorText ? <Text style={styles.error}>{readErrorText}</Text> : null}
                 {errorText ? <Text style={styles.error}>{errorText}</Text> : null}
+                {infoText ? <Text style={styles.info}>{infoText}</Text> : null}
               </>
             }
             ListEmptyComponent={
@@ -935,7 +1249,12 @@ export default function ListScreen() {
               )
             }
             renderItem={({ item }) => (
-              <View style={styles.itemCard}>
+              <View
+                style={[
+                  styles.itemCard,
+                  recentlyRestockedIds.includes(item.id) && styles.itemCardHighlighted
+                ]}
+              >
                 <View style={styles.itemContent}>
                   <Text style={styles.itemName}>{item.name}</Text>
                   <Text style={styles.itemMeta}>
@@ -971,6 +1290,9 @@ export default function ListScreen() {
               <Text style={styles.modalTitle}>Registrar surtido</Text>
               <Text style={styles.modalInfo}>Artículo: {supplyItem?.name}</Text>
               <Text style={styles.modalInfo}>Cantidad: {supplyItem?.quantity}</Text>
+              {supplyItem?.preferredStoreName ? (
+                <Text style={styles.modalInfo}>Tienda sugerida: {supplyItem.preferredStoreName}</Text>
+              ) : null}
 
               <Text style={styles.modalLabel}>Tienda</Text>
               {stores.length === 0 ? (
@@ -1040,6 +1362,115 @@ export default function ListScreen() {
                 <Text style={styles.modalConfirmText}>Confirmar</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={restockVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeRestockSelector}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Reponer desde surtidos</Text>
+            <Text style={styles.modalInfo}>
+              Selecciona uno o varios artículos para regresarlos a pendientes.
+            </Text>
+            <TextInput
+              placeholder="Buscar artículo surtido"
+              placeholderTextColor="#94a3b8"
+              value={restockSearch}
+              onChangeText={setRestockSearch}
+              style={styles.input}
+            />
+            <ScrollView
+              style={styles.restockListScroll}
+              contentContainerStyle={styles.restockList}
+              keyboardShouldPersistTaps="handled"
+            >
+              {restockCandidates.length === 0 ? (
+                <Text style={styles.helper}>No hay artículos surtidos para mostrar.</Text>
+              ) : (
+                restockCandidates.map((candidate) => {
+                  const selected = restockSelectedKeys.includes(candidate.key);
+                  return (
+                    <Pressable
+                      key={candidate.key}
+                      onPress={() => toggleRestockSelection(candidate.key)}
+                      style={[styles.restockRow, selected && styles.restockRowSelected]}
+                    >
+                      <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+                        {selected ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                      </View>
+                      <View style={styles.restockRowContent}>
+                        <Text style={styles.restockRowTitle}>{candidate.name}</Text>
+                        <Text style={styles.restockRowMeta}>
+                          Última cantidad: {candidate.quantity}
+                          {typeof candidate.lastPricePaid === "number"
+                            ? ` | Último precio: $${candidate.lastPricePaid}`
+                            : ""}
+                          {candidate.lastStoreName ? ` | Tienda: ${candidate.lastStoreName}` : ""}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })
+              )}
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <Pressable onPress={closeRestockSelector} style={styles.modalCancel}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setRestockModeVisible(true)}
+                disabled={restockSelectedCount === 0 || busy}
+                style={[
+                  styles.modalConfirm,
+                  (restockSelectedCount === 0 || busy) && styles.addButtonDisabled
+                ]}
+              >
+                <Text style={styles.modalConfirmText}>Continuar ({restockSelectedCount})</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={restockModeVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRestockModeVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modeCard}>
+            <Text style={styles.modalTitle}>Precio en pendientes</Text>
+            <Text style={styles.modalInfo}>
+              ¿Quieres reponer estos artículos con su último precio o dejarlo en blanco?
+            </Text>
+            <Pressable
+              onPress={() => addSelectedRestockItems(true)}
+              disabled={busy}
+              style={[styles.modePrimary, busy && styles.addButtonDisabled]}
+            >
+              <Text style={styles.modePrimaryText}>Con último precio</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => addSelectedRestockItems(false)}
+              disabled={busy}
+              style={[styles.modeSecondary, busy && styles.addButtonDisabled]}
+            >
+              <Text style={styles.modeSecondaryText}>Sin precio</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setRestockModeVisible(false)}
+              style={styles.modeBack}
+              disabled={busy}
+            >
+              <Text style={styles.modeBackText}>Volver</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -1173,6 +1604,11 @@ const styles = StyleSheet.create({
     color: "#166534",
     fontWeight: "600"
   },
+  prefillHintStoreText: {
+    marginTop: 4,
+    color: "#166534",
+    fontWeight: "700"
+  },
   inlineButton: {
     borderRadius: 8,
     backgroundColor: "#1d4ed8",
@@ -1233,9 +1669,38 @@ const styles = StyleSheet.create({
   activityLine: {
     color: "#334155"
   },
+  restockCard: {
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eff6ff",
+    borderRadius: 12,
+    padding: 10,
+    gap: 7
+  },
+  restockTitle: {
+    color: "#1e3a8a",
+    fontWeight: "700"
+  },
+  restockText: {
+    color: "#1e40af"
+  },
+  restockButton: {
+    borderRadius: 8,
+    backgroundColor: "#2563eb",
+    paddingVertical: 10,
+    alignItems: "center"
+  },
+  restockButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
+  },
   error: {
     color: "#b91c1c",
     fontWeight: "600"
+  },
+  info: {
+    color: "#0f766e",
+    fontWeight: "700"
   },
   list: {
     gap: 8,
@@ -1254,6 +1719,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10
+  },
+  itemCardHighlighted: {
+    borderColor: "#f59e0b",
+    backgroundColor: "#fff7ed"
   },
   itemActions: {
     alignItems: "flex-end",
@@ -1365,6 +1834,96 @@ const styles = StyleSheet.create({
   },
   storeChipTextActive: {
     color: "#1e40af"
+  },
+  restockListScroll: {
+    maxHeight: 330
+  },
+  restockList: {
+    gap: 8,
+    paddingVertical: 2
+  },
+  restockRow: {
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: "#f8fbff",
+    flexDirection: "row",
+    gap: 8
+  },
+  restockRowSelected: {
+    borderColor: "#1d4ed8",
+    backgroundColor: "#dbeafe"
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#94a3b8",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff"
+  },
+  checkboxSelected: {
+    borderColor: "#1d4ed8",
+    backgroundColor: "#1d4ed8"
+  },
+  checkboxMark: {
+    color: "#ffffff",
+    fontWeight: "700"
+  },
+  restockRowContent: {
+    flex: 1,
+    gap: 2
+  },
+  restockRowTitle: {
+    color: "#0f172a",
+    fontWeight: "700"
+  },
+  restockRowMeta: {
+    color: "#334155",
+    fontSize: 12
+  },
+  modeCard: {
+    marginHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    padding: 14,
+    gap: 10
+  },
+  modePrimary: {
+    borderRadius: 8,
+    backgroundColor: "#0f766e",
+    paddingVertical: 10,
+    alignItems: "center"
+  },
+  modePrimaryText: {
+    color: "#ffffff",
+    fontWeight: "700"
+  },
+  modeSecondary: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#0f766e",
+    paddingVertical: 10,
+    alignItems: "center",
+    backgroundColor: "#ffffff"
+  },
+  modeSecondaryText: {
+    color: "#0f766e",
+    fontWeight: "700"
+  },
+  modeBack: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    paddingVertical: 9,
+    alignItems: "center"
+  },
+  modeBackText: {
+    color: "#334155",
+    fontWeight: "600"
   },
   modalActions: {
     marginTop: 4,

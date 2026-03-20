@@ -1,17 +1,20 @@
 import { Stack, useRouter } from "expo-router";
+import Constants from "expo-constants";
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
+  Alert,
+  BackHandler,
+  Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { onAuthStateChanged } from "firebase/auth";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../src/config/firebase";
 
@@ -23,7 +26,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
+  const appVersion = Constants.expoConfig?.version ?? "sin versión";
   const [isAdmin, setIsAdmin] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const contentHorizontalPadding = 36;
   const gridGap = 10;
   const isSingleColumn = windowWidth < 320;
@@ -59,6 +64,37 @@ export default function HomeScreen() {
     };
   }, []);
 
+  async function handleSignOut() {
+    if (signingOut) {
+      return;
+    }
+
+    Alert.alert(
+      "Salir de la app",
+      Platform.OS === "android"
+        ? "Se cerrará tu sesión y se cerrará la app. ¿Deseas continuar?"
+        : "Se cerrará tu sesión. ¿Deseas continuar?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Salir",
+          style: "destructive",
+          onPress: async () => {
+            setSigningOut(true);
+            try {
+              await signOut(auth);
+              if (Platform.OS === "android") {
+                BackHandler.exitApp();
+              }
+            } finally {
+              setSigningOut(false);
+            }
+          }
+        }
+      ]
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -69,10 +105,12 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.hero}>
-          <Text style={styles.eyebrow}>MVP FAMILIAR</Text>
-          <Text style={styles.title}>Super App</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Super App</Text>
+            <Text style={styles.versionTag}>Versión {appVersion}</Text>
+          </View>
           <Text style={styles.subtitle}>
-            Lista compartida, surtido y control de usuarios desde una sola pantalla.
+            Lista compartida, surtido y control de usuarios.
           </Text>
         </View>
 
@@ -86,17 +124,6 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.cardTitle}>Lista</Text>
             <Text style={styles.cardSubtitle}>Pendientes y surtido</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push("/auth")}
-            style={[styles.card, { width: cardWidth }, styles.cardSky]}
-          >
-            <View style={styles.iconWrap}>
-              <MaterialCommunityIcons name="account-key-outline" size={26} color="#0c4a6e" />
-            </View>
-            <Text style={styles.cardTitle}>Acceso</Text>
-            <Text style={styles.cardSubtitle}>Registro y login</Text>
           </Pressable>
 
           <Pressable
@@ -144,6 +171,14 @@ export default function HomeScreen() {
             <MaterialCommunityIcons name="cloud-check-outline" size={20} color="#334155" />
             <Text style={styles.secondaryActionText}>Estado Firebase</Text>
           </Pressable>
+          <Pressable
+            onPress={handleSignOut}
+            disabled={signingOut}
+            style={[styles.dangerAction, signingOut && styles.disabledAction]}
+          >
+            <MaterialCommunityIcons name="logout" size={20} color="#ffffff" />
+            <Text style={styles.dangerActionText}>{signingOut ? "Saliendo..." : "Salir"}</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -165,22 +200,31 @@ const styles = StyleSheet.create({
     padding: 18,
     backgroundColor: "#0f172a"
   },
-  eyebrow: {
-    color: "#93c5fd",
-    fontWeight: "700",
-    letterSpacing: 1,
-    fontSize: 11
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
   },
   title: {
-    marginTop: 4,
     fontSize: 32,
     fontWeight: "800",
-    color: "#f8fafc"
+    color: "#f8fafc",
+    flexShrink: 1
   },
   subtitle: {
     marginTop: 6,
     fontSize: 16,
     color: "#cbd5e1"
+  },
+  versionTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#1e293b",
+    color: "#bfdbfe",
+    fontSize: 12,
+    fontWeight: "700"
   },
   grid: {
     flexDirection: "row",
@@ -197,9 +241,6 @@ const styles = StyleSheet.create({
   },
   cardEmerald: {
     backgroundColor: "#ecfdf5"
-  },
-  cardSky: {
-    backgroundColor: "#f0f9ff"
   },
   cardAmber: {
     backgroundColor: "#fffbeb"
@@ -264,5 +305,21 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     color: "#334155",
     fontWeight: "700"
+  },
+  dangerAction: {
+    borderRadius: 10,
+    backgroundColor: "#b91c1c",
+    paddingVertical: 11,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8
+  },
+  dangerActionText: {
+    color: "#ffffff",
+    fontWeight: "700"
+  },
+  disabledAction: {
+    opacity: 0.7
   }
 });

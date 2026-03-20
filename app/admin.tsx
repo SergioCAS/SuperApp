@@ -2,18 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { Stack } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -210,6 +211,40 @@ export default function AdminScreen() {
     }
   }
 
+  function handleDeleteUser(user: UserProfile) {
+    if (!isAdmin || busy) {
+      return;
+    }
+    if (currentUser?.uid === user.uid) {
+      setErrorText("No puedes eliminar tu propio perfil desde esta pantalla.");
+      return;
+    }
+
+    Alert.alert(
+      "Eliminar usuario",
+      `Se eliminará el perfil de ${user.displayName || user.email || user.uid} en Firestore. La cuenta de acceso en Firebase Auth no se borra desde aquí.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            setBusy(true);
+            setErrorText("");
+            try {
+              const userRef = doc(db, "users", user.uid);
+              await deleteDoc(userRef);
+            } catch (error) {
+              setErrorText(asTextError(error));
+            } finally {
+              setBusy(false);
+            }
+          }
+        }
+      ]
+    );
+  }
+
   if (loadingProfile) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -229,6 +264,12 @@ export default function AdminScreen() {
         <Text style={styles.subtitle}>
           Admin: {isAdmin ? "Sí" : "No"} | Tu hogar: {myProfile?.householdId || "sin asignar"}
         </Text>
+        {isAdmin ? (
+          <Text style={styles.helper}>
+            Eliminar usuario borra solo su perfil en Firestore. La cuenta de Firebase Auth se
+            elimina desde la consola.
+          </Text>
+        ) : null}
 
         {!isAdmin ? (
           <View style={styles.warnCard}>
@@ -319,6 +360,19 @@ export default function AdminScreen() {
                         </Text>
                       </Pressable>
                     </View>
+
+                    <Pressable
+                      onPress={() => handleDeleteUser(item)}
+                      disabled={busy || currentUser?.uid === item.uid}
+                      style={[
+                        styles.dangerButton,
+                        (busy || currentUser?.uid === item.uid) && styles.primaryButtonDisabled
+                      ]}
+                    >
+                      <Text style={styles.dangerText}>
+                        {currentUser?.uid === item.uid ? "No puedes eliminarte" : "Eliminar usuario"}
+                      </Text>
+                    </Pressable>
                   </View>
                 )}
               />
@@ -457,5 +511,16 @@ const styles = StyleSheet.create({
   ghostText: {
     color: "#1d4ed8",
     fontWeight: "700"
+  },
+  dangerButton: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#dc2626",
+    alignItems: "center"
+  },
+  dangerText: {
+    color: "#ffffff",
+    fontWeight: "800"
   }
 });

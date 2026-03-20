@@ -1,7 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import Constants from "expo-constants";
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { db } from "../src/config/firebase";
 
 function isConfigured() {
@@ -23,6 +23,7 @@ export default function HealthScreen() {
   const insets = useSafeAreaInsets();
   const configured = isConfigured();
   const firestoreReady = !!db;
+  const appVersion = Constants.expoConfig?.version ?? "sin versión";
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -31,6 +32,7 @@ export default function HealthScreen() {
         <Text style={styles.title}>Estado del proyecto</Text>
 
         <View style={styles.card}>
+          <Text style={styles.row}>Versión app: {appVersion}</Text>
           <Text style={styles.row}>
             Variables Firebase: {configured ? "OK" : "Pendiente"}
           </Text>

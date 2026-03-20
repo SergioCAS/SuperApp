@@ -1,6 +1,12 @@
-import { initializeApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { getApp, getApps, initializeApp } from "firebase/app";
+import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  getAuth,
+  initializeAuth,
+  type Auth
+} from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { Platform } from "react-native";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -25,8 +31,25 @@ export let db!: Firestore;
 export let firebaseBootError: string | null = null;
 
 try {
-  const app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  if (Platform.OS === "web") {
+    auth = getAuth(app);
+  } else {
+    try {
+      auth = initializeAuth(app, {
+        persistence: require("@firebase/auth").getReactNativePersistence(
+          ReactNativeAsyncStorage
+        )
+      });
+    } catch (error) {
+      const isAlreadyInitialized =
+        error instanceof Error && error.message.includes("auth/already-initialized");
+      if (!isAlreadyInitialized) {
+        throw error;
+      }
+      auth = getAuth(app);
+    }
+  }
   db = getFirestore(app);
 } catch (error) {
   const message = error instanceof Error ? error.message : "Error desconocido al iniciar Firebase";

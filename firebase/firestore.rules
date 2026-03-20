@@ -63,7 +63,17 @@ service cloud.firestore {
     function validListItemData() {
       return request.resource.data.keys().hasAll(["name", "normalizedName", "quantity", "addedByUid", "createdAt", "updatedAt"]) &&
         request.resource.data.keys().hasOnly([
-          "name", "normalizedName", "quantity", "unit", "estimatedPrice", "estimatedUnitPrice", "addedByUid", "createdAt", "updatedAt"
+          "name",
+          "normalizedName",
+          "quantity",
+          "unit",
+          "estimatedPrice",
+          "estimatedUnitPrice",
+          "addedByUid",
+          "createdAt",
+          "updatedAt",
+          "preferredStoreId",
+          "preferredStoreName"
         ]) &&
         isNonEmptyString(request.resource.data.name) &&
         isNonEmptyString(request.resource.data.normalizedName) &&
@@ -74,7 +84,9 @@ service cloud.firestore {
         request.resource.data.updatedAt is timestamp &&
         (!request.resource.data.keys().hasAny(["unit"]) || isNonEmptyString(request.resource.data.unit)) &&
         (!request.resource.data.keys().hasAny(["estimatedPrice"]) || (request.resource.data.estimatedPrice is number && request.resource.data.estimatedPrice >= 0)) &&
-        (!request.resource.data.keys().hasAny(["estimatedUnitPrice"]) || (request.resource.data.estimatedUnitPrice is number && request.resource.data.estimatedUnitPrice >= 0));
+        (!request.resource.data.keys().hasAny(["estimatedUnitPrice"]) || (request.resource.data.estimatedUnitPrice is number && request.resource.data.estimatedUnitPrice >= 0)) &&
+        (!request.resource.data.keys().hasAny(["preferredStoreId"]) || isNonEmptyString(request.resource.data.preferredStoreId)) &&
+        (!request.resource.data.keys().hasAny(["preferredStoreName"]) || isNonEmptyString(request.resource.data.preferredStoreName));
     }
 
     function validPurchaseData() {
@@ -155,7 +167,7 @@ service cloud.firestore {
         (isSelf(uid) && selfUserUpdateIsSafe()) ||
         isAdmin()
       );
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     match /households/{householdId} {

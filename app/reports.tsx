@@ -4,14 +4,13 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import {
   Timestamp,
