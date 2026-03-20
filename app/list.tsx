@@ -17,6 +17,7 @@ import {
   Timestamp,
   addDoc,
   collection,
+  deleteDoc,
   deleteField,
   doc,
   limit,
@@ -26,9 +27,15 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  writeBatch,
   type DocumentData
 } from "firebase/firestore";
 import { auth, db } from "../src/config/firebase";
+
+const PURCHASES_QUERY_LIMIT = 250;
+const ACTIVITY_QUERY_LIMIT = 12;
+const EVENT_NOTICE_MS = 4500;
+const INFO_TEXT_MS = 5000;
 
 type ListItemView = {
   id: string;
@@ -206,7 +213,7 @@ function resolveSeasonId(seasons: SeasonOption[], purchaseDate: Date) {
 
 export default function ListScreen() {
   const insets = useSafeAreaInsets();
-  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [currentUser, setCurrentUser] = useState<User | null>(auth?.currentUser ?? null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
@@ -229,6 +236,7 @@ export default function ListScreen() {
   const [nameHasFocus, setNameHasFocus] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [estimatedPrice, setEstimatedPrice] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [selectedPendingSuggestionId, setSelectedPendingSuggestionId] = useState<string | null>(null);
   const [prefillHintText, setPrefillHintText] = useState("");
@@ -412,7 +420,7 @@ export default function ListScreen() {
     );
 
     const purchasesRef = collection(db, "households", householdId, "purchases");
-    const purchasesQuery = query(purchasesRef, orderBy("purchasedAt", "desc"), limit(250));
+    const purchasesQuery = query(purchasesRef, orderBy("purchasedAt", "desc"), limit(PURCHASES_QUERY_LIMIT));
     const unsubscribePurchases = onSnapshot(
       purchasesQuery,
       (snap) => {
@@ -468,7 +476,7 @@ export default function ListScreen() {
     }
 
     const activityRef = collection(db, "households", householdId, "activity");
-    const q = query(activityRef, orderBy("createdAt", "desc"), limit(12));
+    const q = query(activityRef, orderBy("createdAt", "desc"), limit(ACTIVITY_QUERY_LIMIT));
     const unsubscribe = onSnapshot(
       q,
       (snap) => {
@@ -520,7 +528,7 @@ export default function ListScreen() {
     }
     const timer = setTimeout(() => {
       setEventNotice("");
-    }, 4500);
+    }, EVENT_NOTICE_MS);
     return () => clearTimeout(timer);
   }, [eventNotice]);
 
@@ -528,7 +536,7 @@ export default function ListScreen() {
     if (!infoText) {
       return;
     }
-    const timer = setTimeout(() => setInfoText(""), 5000);
+    const timer = setTimeout(() => setInfoText(""), INFO_TEXT_MS);
     return () => clearTimeout(timer);
   }, [infoText]);
 
@@ -774,6 +782,7 @@ export default function ListScreen() {
       setQuantity("");
       setEstimatedPrice("");
       setEditingItemId(null);
+      setFormOpen(false);
       setSelectedPendingSuggestionId(null);
       setPrefillHintText("");
       setPreferredStoreIdDraft("");
@@ -813,9 +822,22 @@ export default function ListScreen() {
 
   function startEditingPendingItem(item: ListItemView) {
     fillFromPendingItem(item);
+    setFormOpen(true);
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     });
+  }
+
+  async function handleRemovePendingItem(item: ListItemView) {
+    if (!householdId || busy) return;
+    setBusy(true);
+    try {
+      await deleteDoc(doc(db, "households", householdId, "list_items", item.id));
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : "Error al eliminar.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function openSupplyModal(item: ListItemView) {
@@ -883,6 +905,7 @@ export default function ListScreen() {
       const itemsRef = collection(db, "households", householdId, "list_items");
       const createdIds: string[] = [];
       let skippedDuplicates = 0;
+      const batch = writeBatch(db);
 
       for (const candidate of selected) {
         if (existingPending.has(candidate.normalizedName)) {
@@ -908,9 +931,14 @@ export default function ListScreen() {
         if (candidate.lastStoreName) {
           payload.preferredStoreName = candidate.lastStoreName;
         }
-        const created = await addDoc(itemsRef, payload);
-        createdIds.push(created.id);
+        const newItemRef = doc(itemsRef);
+        batch.set(newItemRef, payload);
+        createdIds.push(newItemRef.id);
         existingPending.add(candidate.normalizedName);
+      }
+
+      if (createdIds.length > 0) {
+        await batch.commit();
       }
 
       if (createdIds.length > 0) {
@@ -985,13 +1013,18 @@ export default function ListScreen() {
         tx.update(storeRef, { lastUsedAt: purchaseTs });
       });
 
-      await addActivityEvent(
-        householdId,
-        "supplied",
-        supplyItem.name,
-        currentUser.uid,
-        profile?.displayName?.trim() || currentUser.email || "Usuario"
-      );
+      // Si falla el registro de actividad no debe bloquear el supply (la compra ya se guardó).
+      try {
+        await addActivityEvent(
+          householdId,
+          "supplied",
+          supplyItem.name,
+          currentUser.uid,
+          profile?.displayName?.trim() || currentUser.email || "Usuario"
+        );
+      } catch (activityError) {
+        console.warn("No se pudo registrar actividad de supply.", activityError);
+      }
 
       closeSupplyModal();
     } catch (error) {
@@ -1003,7 +1036,7 @@ export default function ListScreen() {
 
   if (loadingProfile) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={["bottom"]}>
         <View style={styles.center}>
           <ActivityIndicator color="#0f766e" />
           <Text style={styles.helper}>Cargando perfil...</Text>
@@ -1013,7 +1046,7 @@ export default function ListScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <Stack.Screen options={{ title: "Lista de compras" }} />
       <View style={styles.container}>
         <Text style={styles.title}>Lista compartida</Text>
@@ -1044,10 +1077,22 @@ export default function ListScreen() {
                   </View>
                 ) : null}
 
+                {formOpen || !!editingItemId ? (
                 <View style={styles.formCard}>
-                  <Text style={styles.formTitle}>
-                    {editingItemId ? "Editar artículo pendiente" : "Agregar artículo"}
-                  </Text>
+                  <View style={styles.formHeader}>
+                    <Text style={styles.formTitle}>
+                      {editingItemId ? "Editar artículo pendiente" : "Añadir artículo"}
+                    </Text>
+                    {!editingItemId ? (
+                      <Pressable
+                        onPress={() => setFormOpen(false)}
+                        style={styles.closeButton}
+                        hitSlop={8}
+                      >
+                        <Text style={styles.closeText}>✕</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
                   <TextInput
                     placeholder="Ej. Leche"
                     placeholderTextColor="#94a3b8"
@@ -1176,6 +1221,7 @@ export default function ListScreen() {
                       <Pressable
                         onPress={() => {
                           setEditingItemId(null);
+                          setFormOpen(false);
                           setSelectedPendingSuggestionId(null);
                           setPrefillHintText("");
                           setPreferredStoreIdDraft("");
@@ -1191,6 +1237,11 @@ export default function ListScreen() {
                     ) : null}
                   </View>
                 </View>
+                ) : (
+                  <Pressable onPress={() => setFormOpen(true)} style={styles.addItemButton}>
+                    <Text style={styles.addItemButtonText}>＋ Añadir artículo</Text>
+                  </Pressable>
+                )}
 
                 <View style={styles.restockCard}>
                   <Text style={styles.restockTitle}>Reposición rápida</Text>
@@ -1268,6 +1319,13 @@ export default function ListScreen() {
                 <View style={styles.itemActions}>
                   <Pressable onPress={() => startEditingPendingItem(item)} style={styles.editButton}>
                     <Text style={styles.editText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleRemovePendingItem(item)}
+                    disabled={busy}
+                    style={styles.removeButton}
+                  >
+                    <Text style={styles.removeText}>Quitar</Text>
                   </Pressable>
                   <Pressable onPress={() => openSupplyModal(item)} style={styles.doneButton}>
                     <Text style={styles.doneText}>Surtir</Text>
@@ -1485,17 +1543,18 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
-    gap: 12
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    gap: 8
   },
   title: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "800",
     color: "#0f172a"
   },
   subtitle: {
-    color: "#334155",
-    fontSize: 14
+    color: "#475569",
+    fontSize: 13
   },
   warnCard: {
     borderWidth: 1,
@@ -1512,6 +1571,19 @@ const styles = StyleSheet.create({
   warnText: {
     color: "#78350f"
   },
+  addItemButton: {
+    borderWidth: 1.5,
+    borderColor: "#0f766e",
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center" as const,
+    marginBottom: 4
+  },
+  addItemButtonText: {
+    color: "#0f766e",
+    fontWeight: "700" as const,
+    fontSize: 15
+  },
   formCard: {
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -1519,6 +1591,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     gap: 8
+  },
+  formHeader: {
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const
+  },
+  closeButton: {
+    padding: 4
+  },
+  closeText: {
+    color: "#64748b",
+    fontSize: 16,
+    fontWeight: "600" as const
   },
   formTitle: {
     color: "#0f172a",
@@ -1756,6 +1841,18 @@ const styles = StyleSheet.create({
   },
   editText: {
     color: "#334155",
+    fontWeight: "700"
+  },
+  removeButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fca5a5",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: "#fff1f2"
+  },
+  removeText: {
+    color: "#dc2626",
     fontWeight: "700"
   },
   doneText: {

@@ -2,26 +2,12 @@ import { Stack, useRouter } from "expo-router";
 import Constants from "expo-constants";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { db } from "../src/config/firebase";
-
-function isConfigured() {
-  const extras = Constants.expoConfig?.extra ?? {};
-  const publicVars = [
-    process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-    process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-    process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    process.env.EXPO_PUBLIC_FIREBASE_APP_ID
-  ];
-  const fromExtra = Object.values(extras).some(Boolean);
-  return publicVars.every(Boolean) || fromExtra;
-}
+import { auth, db, firebaseBootError } from "../src/config/firebase";
 
 export default function HealthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const configured = isConfigured();
+  const configured = !!auth && !!db && !firebaseBootError;
   const firestoreReady = !!db;
   const appVersion = Constants.expoConfig?.version ?? "sin versión";
 
@@ -43,7 +29,7 @@ export default function HealthScreen() {
 
         {!configured ? (
           <Text style={styles.warning}>
-            Completa `mobile/.env` con las credenciales de Firebase.
+            {firebaseBootError ?? "Firebase no se inicializó correctamente."}
           </Text>
         ) : null}
 

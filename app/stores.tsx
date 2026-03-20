@@ -23,6 +23,7 @@ import {
   updateDoc
 } from "firebase/firestore";
 import { auth, db } from "../src/config/firebase";
+import { levenshtein, normalizeForMatch } from "../src/utils/normalize";
 
 type UserProfile = {
   householdId?: string;
@@ -39,31 +40,6 @@ function asTextError(error: unknown) {
     return error.message;
   }
   return "Ocurrió un error inesperado.";
-}
-
-function normalizeForMatch(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function levenshtein(a: string, b: string) {
-  const dp: number[][] = Array.from({ length: a.length + 1 }, () =>
-    Array.from({ length: b.length + 1 }, () => 0)
-  );
-  for (let i = 0; i <= a.length; i += 1) dp[i][0] = i;
-  for (let j = 0; j <= b.length; j += 1) dp[0][j] = j;
-  for (let i = 1; i <= a.length; i += 1) {
-    for (let j = 1; j <= b.length; j += 1) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
-    }
-  }
-  return dp[a.length][b.length];
 }
 
 function isLikelyDuplicateStoreName(a: string, b: string) {
@@ -92,11 +68,12 @@ function isLikelyDuplicateStoreName(a: string, b: string) {
 export default function StoresScreen() {
   const listRef = useRef<FlatList<StoreView>>(null);
   const insets = useSafeAreaInsets();
-  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [currentUser, setCurrentUser] = useState<User | null>(auth?.currentUser ?? null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [stores, setStores] = useState<StoreView[]>([]);
   const [loadingStores, setLoadingStores] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [name, setName] = useState("");
   const [nameHasFocus, setNameHasFocus] = useState(false);
   const [editingStoreId, setEditingStoreId] = useState<string | null>(null);
@@ -210,6 +187,7 @@ export default function StoresScreen() {
       });
       setName("");
       setNameHasFocus(false);
+      setFormOpen(false);
       setInfoText(`Tienda creada: ${storeName}.`);
     } catch (error) {
       setErrorText(asTextError(error));
@@ -303,9 +281,14 @@ export default function StoresScreen() {
             <Text style={styles.warnTitle}>Falta householdId en tu perfil</Text>
             <Text style={styles.warnText}>No se puede administrar tiendas sin hogar asignado.</Text>
           </View>
-        ) : (
+        ) : formOpen ? (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Agregar tienda</Text>
+            <View style={styles.formHeader}>
+              <Text style={styles.formTitle}>Agregar tienda</Text>
+              <Pressable onPress={() => setFormOpen(false)} style={styles.closeButton} hitSlop={8}>
+                <Text style={styles.closeText}>✕</Text>
+              </Pressable>
+            </View>
             <TextInput
               placeholder="Ej. Soriana"
               value={name}
@@ -314,13 +297,6 @@ export default function StoresScreen() {
               onChangeText={setName}
               style={styles.input}
             />
-            <Pressable
-              onPress={handleCreate}
-              disabled={!canCreate}
-              style={[styles.primaryButton, !canCreate && styles.primaryButtonDisabled]}
-            >
-              <Text style={styles.primaryText}>Guardar tienda</Text>
-            </Pressable>
             {!nameHasFocus && duplicateCreate ? (
               <View style={styles.duplicateBox}>
                 <Text style={styles.inlineWarn}>
@@ -331,7 +307,18 @@ export default function StoresScreen() {
                 </Pressable>
               </View>
             ) : null}
+            <Pressable
+              onPress={handleCreate}
+              disabled={!canCreate}
+              style={[styles.primaryButton, !canCreate && styles.primaryButtonDisabled]}
+            >
+              <Text style={styles.primaryText}>Guardar tienda</Text>
+            </Pressable>
           </View>
+        ) : (
+          <Pressable onPress={() => setFormOpen(true)} style={styles.addButton}>
+            <Text style={styles.addButtonText}>＋ Agregar tienda</Text>
+          </Pressable>
         )}
 
         {householdId && !isAdmin ? (
@@ -448,8 +435,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
-    gap: 12
+    padding: 14,
+    gap: 8
   },
   center: {
     flex: 1,
@@ -458,11 +445,12 @@ const styles = StyleSheet.create({
     gap: 8
   },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "800",
     color: "#0f172a"
   },
   subtitle: {
+    fontSize: 13,
     color: "#475569"
   },
   helper: {
@@ -483,6 +471,18 @@ const styles = StyleSheet.create({
   warnText: {
     color: "#78350f"
   },
+  addButton: {
+    borderWidth: 1.5,
+    borderColor: "#0f766e",
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center"
+  },
+  addButtonText: {
+    color: "#0f766e",
+    fontWeight: "700",
+    fontSize: 15
+  },
   formCard: {
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -491,9 +491,22 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8
   },
+  formHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
   formTitle: {
     color: "#0f172a",
     fontWeight: "700"
+  },
+  closeButton: {
+    padding: 4
+  },
+  closeText: {
+    color: "#64748b",
+    fontSize: 16,
+    fontWeight: "600"
   },
   input: {
     borderWidth: 1,

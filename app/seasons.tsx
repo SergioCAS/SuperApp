@@ -22,6 +22,7 @@ import {
   updateDoc
 } from "firebase/firestore";
 import { auth, db } from "../src/config/firebase";
+import { levenshtein, normalizeForMatch } from "../src/utils/normalize";
 
 type UserProfile = {
   displayName?: string;
@@ -63,30 +64,6 @@ function monthDayValue(month: number, day: number) {
   return month * 100 + day;
 }
 
-function normalizeForMatch(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function levenshtein(a: string, b: string) {
-  const dp: number[][] = Array.from({ length: a.length + 1 }, () =>
-    Array.from({ length: b.length + 1 }, () => 0)
-  );
-  for (let i = 0; i <= a.length; i += 1) dp[i][0] = i;
-  for (let j = 0; j <= b.length; j += 1) dp[0][j] = j;
-  for (let i = 1; i <= a.length; i += 1) {
-    for (let j = 1; j <= b.length; j += 1) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
-    }
-  }
-  return dp[a.length][b.length];
-}
-
 function isLikelyDuplicateSeasonName(a: string, b: string) {
   const na = normalizeForMatch(a).replace(/\s+/g, "");
   const nb = normalizeForMatch(b).replace(/\s+/g, "");
@@ -105,7 +82,7 @@ function isLikelyDuplicateSeasonName(a: string, b: string) {
 export default function SeasonsScreen() {
   const listRef = useRef<FlatList<SeasonView>>(null);
   const insets = useSafeAreaInsets();
-  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [currentUser, setCurrentUser] = useState<User | null>(auth?.currentUser ?? null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [seasons, setSeasons] = useState<SeasonView[]>([]);
@@ -115,6 +92,7 @@ export default function SeasonsScreen() {
   const [infoText, setInfoText] = useState("");
   const [highlightedSeasonId, setHighlightedSeasonId] = useState<string | null>(null);
 
+  const [formOpen, setFormOpen] = useState(false);
   const [name, setName] = useState("");
   const [nameHasFocus, setNameHasFocus] = useState(false);
   const [startMonth, setStartMonth] = useState("");
@@ -255,6 +233,7 @@ export default function SeasonsScreen() {
       setEndMonth("");
       setEndDay("");
       setActive(true);
+      setFormOpen(false);
       setInfoText("Época creada.");
     } catch (error) {
       setErrorText(asTextError(error));
@@ -356,9 +335,18 @@ export default function SeasonsScreen() {
               Puedes ver épocas, pero para crear/editar/eliminar necesitas `role=admin`.
             </Text>
           </View>
-        ) : (
+        ) : formOpen ? (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Nueva época</Text>
+            <View style={styles.formHeader}>
+              <Text style={styles.formTitle}>Nueva época</Text>
+              <Pressable
+                onPress={() => setFormOpen(false)}
+                style={styles.closeButton}
+                hitSlop={8}
+              >
+                <Text style={styles.closeText}>✕</Text>
+              </Pressable>
+            </View>
             <TextInput
               placeholder="Nombre (ej. Navidad)"
               value={name}
@@ -426,6 +414,10 @@ export default function SeasonsScreen() {
               <Text style={styles.primaryText}>Guardar época</Text>
             </Pressable>
           </View>
+        ) : (
+          <Pressable onPress={() => setFormOpen(true)} style={styles.addButton}>
+            <Text style={styles.addButtonText}>＋ Nueva época</Text>
+          </Pressable>
         )}
 
         {errorText ? <Text style={styles.error}>{errorText}</Text> : null}
@@ -498,8 +490,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
-    gap: 12
+    padding: 14,
+    gap: 8
   },
   center: {
     flex: 1,
@@ -508,11 +500,12 @@ const styles = StyleSheet.create({
     gap: 8
   },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "800",
     color: "#0f172a"
   },
   subtitle: {
+    fontSize: 13,
     color: "#475569"
   },
   helper: {
@@ -533,6 +526,18 @@ const styles = StyleSheet.create({
   warnText: {
     color: "#78350f"
   },
+  addButton: {
+    borderWidth: 1.5,
+    borderColor: "#0f766e",
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center"
+  },
+  addButtonText: {
+    color: "#0f766e",
+    fontWeight: "700",
+    fontSize: 15
+  },
   formCard: {
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -541,9 +546,22 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8
   },
+  formHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
   formTitle: {
     color: "#0f172a",
     fontWeight: "700"
+  },
+  closeButton: {
+    padding: 4
+  },
+  closeText: {
+    color: "#64748b",
+    fontSize: 16,
+    fontWeight: "600"
   },
   input: {
     borderWidth: 1,

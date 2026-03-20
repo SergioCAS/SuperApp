@@ -77,7 +77,7 @@ export default function AuthScreen() {
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [errorText, setErrorText] = useState("");
-  const [currentEmail, setCurrentEmail] = useState<string | null>(auth.currentUser?.email ?? null);
+  const [currentEmail, setCurrentEmail] = useState<string | null>(auth?.currentUser?.email ?? null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {

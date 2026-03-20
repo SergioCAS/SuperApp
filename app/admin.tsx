@@ -45,7 +45,7 @@ function asTextError(error: unknown) {
 
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
-  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [currentUser, setCurrentUser] = useState<User | null>(auth?.currentUser ?? null);
   const [myProfile, setMyProfile] = useState<UserProfile | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
