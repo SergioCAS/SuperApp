@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SúperApp — Manual de Usuario</title>
+<style>
+/* ============================================================
+   VARIABLES & RESET
+   ============================================================ */
+:root{
+  --teal:   #0f766e;
+  --teal-l: #14b8a6;
+  --teal-xl:#99f6e4;
+  --teal-bg:#f0fdfa;
+  --amber:  #f59e0b;
+  --rose:   #f43f5e;
+  --indigo: #6366f1;
+  --green:  #10b981;
+  --navy:   #0f172a;
+  --s800:   #1e293b;
+  --s700:   #334155;
+  --s500:   #64748b;
+  --s300:   #cbd5e1;
+  --s100:   #f1f5f9;
+  --s50:    #f8fafc;
+  --white:  #ffffff;
+  --r:      12px;
+  --rx:     20px;
+  --sh:     0 4px 24px rgba(0,0,0,.09);
+  --sh2:    0 8px 40px rgba(0,0,0,.13);
+  --tr:     .25s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--s50);
+  color:var(--navy);
+  line-height:1.7;
+  overflow-x:hidden;
+}
+
+/* ============================================================
+   SCROLL PROGRESS BAR
+   ============================================================ */
+#progress-bar{
+  position:fixed;top:0;left:0;height:3px;
+  background:linear-gradient(90deg,var(--teal),var(--teal-l),var(--amber));
+  z-index:9999;width:0%;
+  transition:width .1s linear;
+  border-radius:0 2px 2px 0;
+  box-shadow:0 0 8px rgba(20,184,166,.5);
+}
+
+/* ============================================================
+   TOPNAV
+   ============================================================ */
+#topnav{
+  position:fixed;top:0;left:0;right:0;
+  background:rgba(255,255,255,.85);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(203,213,225,.5);
+  z-index:1000;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;height:60px;
+  box-shadow:0 1px 12px rgba(0,0,0,.06);
+}
+.nav-logo{
+  display:flex;align-items:center;gap:10px;
+  text-decoration:none;
+}
+.nav-logo-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--teal),var(--teal-l));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#fff;
+  box-shadow:0 2px 8px rgba(15,118,110,.3);
+}
+.nav-logo-text{font-weight:800;font-size:15px;color:var(--navy)}
+.nav-logo-sub{font-size:11px;color:var(--s500);font-weight:500}
+.nav-links{display:flex;gap:4px;align-items:center}
+.nav-link{
+  padding:6px 12px;border-radius:8px;
+  font-size:13px;font-weight:600;color:var(--s700);
+  text-decoration:none;
+  transition:all var(--tr);
+  cursor:pointer;
+}
+.nav-link:hover,.nav-link.active{background:var(--teal-bg);color:var(--teal)}
+#mobile-menu-btn{
+  display:none;background:none;border:none;
+  font-size:22px;cursor:pointer;color:var(--s700);
+  padding:6px;border-radius:8px;
+}
+#mobile-nav{
+  display:none;
+  position:fixed;top:60px;left:0;right:0;
+  background:white;border-bottom:1px solid var(--s300);
+  padding:12px 16px;z-index:999;
+  box-shadow:var(--sh);
+}
+#mobile-nav a{
+  display:block;padding:10px 12px;border-radius:8px;
+  text-decoration:none;color:var(--s700);font-weight:600;font-size:14px;
+  transition:background var(--tr);
+}
+#mobile-nav a:hover{background:var(--teal-bg);color:var(--teal)}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+#hero{
+  min-height:100vh;
+  background:linear-gradient(160deg,#0c1a2e 0%,#0f3d38 45%,#0f766e 100%);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:100px 24px 80px;
+  position:relative;
+  overflow:hidden;
+}
+
+/* floating blobs */
+.hero-blob{
+  position:absolute;border-radius:50%;
+  filter:blur(60px);opacity:.15;
+  animation:blobFloat 8s ease-in-out infinite;
+}
+.hero-blob:nth-child(1){width:500px;height:500px;background:var(--teal-l);top:-100px;left:-150px;animation-delay:0s}
+.hero-blob:nth-child(2){width:400px;height:400px;background:var(--amber);bottom:-100px;right:-100px;animation-delay:3s}
+.hero-blob:nth-child(3){width:300px;height:300px;background:var(--indigo);top:40%;left:60%;animation-delay:6s}
+@keyframes blobFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.05)}}
+
+/* phone mockup */
+.hero-phone{
+  width:160px;height:290px;
+  border:3px solid rgba(255,255,255,.25);
+  border-radius:28px;
+  background:rgba(255,255,255,.07);
+  backdrop-filter:blur(4px);
+  position:relative;
+  margin-bottom:40px;
+  box-shadow:0 20px 60px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.15);
+  animation:phoneFloat 4s ease-in-out infinite;
+}
+@keyframes phoneFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.phone-notch{
+  width:60px;height:10px;border-radius:6px;
+  background:rgba(255,255,255,.2);
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+}
+.phone-screen{
+  position:absolute;top:26px;left:6px;right:6px;bottom:6px;
+  border-radius:22px;
+  background:linear-gradient(180deg,#0f172a 0%,#1e3a38 100%);
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  align-items:center;
+  padding:14px 10px 10px;
+  gap:6px;
+}
+.phone-title{color:#99f6e4;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.phone-item{
+  width:100%;background:rgba(255,255,255,.07);
+  border-radius:7px;padding:6px 8px;
+  display:flex;align-items:center;gap:6px;
+  border:1px solid rgba(255,255,255,.08);
+  animation:itemPulse 3s ease-in-out infinite;
+}
+.phone-item:nth-child(odd){animation-delay:.5s}
+.phone-item:nth-child(3){animation-delay:1s}
+@keyframes itemPulse{0%,100%{opacity:.7}50%{opacity:1}}
+.phone-dot{width:6px;height:6px;border-radius:50%;background:var(--teal-l);flex-shrink:0}
+.phone-line{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.15)}
+.phone-line-sm{width:55%;height:4px;border-radius:3px;background:rgba(255,255,255,.08)}
+.phone-cta{
+  margin-top:4px;width:100%;height:22px;border-radius:6px;
+  background:linear-gradient(90deg,var(--teal),var(--teal-l));
+  display:flex;align-items:center;justify-content:center;
+}
+.phone-cta-text{color:#fff;font-size:7px;font-weight:800;letter-spacing:.08em}
+
+.hero-content{position:relative;z-index:1;max-width:680px}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;
+  padding:5px 14px;
+  font-size:12px;font-weight:700;color:var(--teal-xl);
+  letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:20px;
+  backdrop-filter:blur(4px);
+}
+.hero-title{
+  font-size:clamp(36px,7vw,64px);
+  font-weight:900;
+  color:#fff;
+  line-height:1.1;
+  margin-bottom:20px;
+  text-shadow:0 2px 20px rgba(0,0,0,.3);
+}
+.hero-title span{
+  background:linear-gradient(90deg,var(--teal-xl),var(--amber));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-subtitle{
+  font-size:18px;color:rgba(255,255,255,.72);
+  margin-bottom:36px;font-weight:400;
+  max-width:520px;margin-left:auto;margin-right:auto;
+}
+.hero-buttons{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:56px}
+.btn-primary{
+  padding:14px 28px;border-radius:12px;
+  background:linear-gradient(135deg,var(--teal),var(--teal-l));
+  color:#fff;font-weight:800;font-size:15px;
+  text-decoration:none;cursor:pointer;border:none;
+  box-shadow:0 4px 16px rgba(15,118,110,.4);
+  transition:all var(--tr);
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(15,118,110,.5)}
+.btn-secondary{
+  padding:14px 28px;border-radius:12px;
+  background:rgba(255,255,255,.1);
+  border:1.5px solid rgba(255,255,255,.25);
+  color:#fff;font-weight:700;font-size:15px;
+  text-decoration:none;cursor:pointer;
+  backdrop-filter:blur(4px);
+  transition:all var(--tr);
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-secondary:hover{background:rgba(255,255,255,.2);transform:translateY(-2px)}
+.hero-stats{
+  display:flex;gap:32px;justify-content:center;flex-wrap:wrap;
+}
+.hero-stat{text-align:center}
+.hero-stat-num{font-size:28px;font-weight:900;color:#fff}
+.hero-stat-lbl{font-size:12px;color:rgba(255,255,255,.5);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+
+/* scroll cue */
+.scroll-cue{
+  position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  color:rgba(255,255,255,.4);font-size:11px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;
+  animation:cueFloat 2s ease-in-out infinite;
+}
+.scroll-cue-arrow{font-size:20px}
+@keyframes cueFloat{0%,100%{opacity:.4;transform:translateX(-50%) translateY(0)}50%{opacity:.8;transform:translateX(-50%) translateY(6px)}}
+
+/* ============================================================
+   SECTIONS COMMON
+   ============================================================ */
+section{padding:80px 24px}
+.section-inner{max-width:960px;margin:0 auto}
+.section-eyebrow{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--teal-bg);border:1px solid var(--teal-xl);
+  border-radius:999px;padding:4px 12px;
+  font-size:11px;font-weight:800;color:var(--teal);
+  letter-spacing:.1em;text-transform:uppercase;
+  margin-bottom:14px;
+}
+.section-title{
+  font-size:clamp(26px,4vw,40px);
+  font-weight:900;color:var(--navy);
+  margin-bottom:12px;line-height:1.2;
+}
+.section-subtitle{font-size:16px;color:var(--s500);max-width:560px;margin-bottom:48px}
+
+/* ============================================================
+   REVEAL ANIMATION
+   ============================================================ */
+.reveal{
+  opacity:0;transform:translateY(28px);
+  transition:opacity .6s ease, transform .6s ease;
+}
+.reveal.visible{opacity:1;transform:none}
+.reveal-left{opacity:0;transform:translateX(-28px);transition:opacity .6s ease,transform .6s ease}
+.reveal-left.visible{opacity:1;transform:none}
+.reveal-right{opacity:0;transform:translateX(28px);transition:opacity .6s ease,transform .6s ease}
+.reveal-right.visible{opacity:1;transform:none}
+
+/* delay helpers */
+.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}
+.d4{transition-delay:.4s}.d5{transition-delay:.5s}
+
+/* ============================================================
+   STEP CARDS
+   ============================================================ */
+.steps-grid{display:flex;flex-direction:column;gap:24px;max-width:700px;margin:0 auto}
+.step-card{
+  display:flex;gap:20px;align-items:flex-start;
+  background:var(--white);
+  border:1px solid var(--s300);
+  border-radius:var(--rx);
+  padding:24px;
+  box-shadow:var(--sh);
+  transition:transform var(--tr),box-shadow var(--tr);
+}
+.step-card:hover{transform:translateX(6px);box-shadow:var(--sh2)}
+.step-num{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--teal),var(--teal-l));
+  color:#fff;font-weight:900;font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 4px 12px rgba(15,118,110,.3);
+}
+.step-body h3{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px}
+.step-body p{font-size:14.5px;color:var(--s700);line-height:1.6}
+.step-body .tip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--teal-bg);border-radius:8px;
+  padding:6px 10px;font-size:12.5px;color:var(--teal);
+  font-weight:600;margin-top:8px;
+}
+
+/* ============================================================
+   FEATURE CARDS
+   ============================================================ */
+.features-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:20px;
+}
+.feature-card{
+  background:var(--white);
+  border:1px solid var(--s300);
+  border-radius:var(--rx);
+  padding:28px 24px;
+  box-shadow:var(--sh);
+  transition:all var(--tr);
+  cursor:default;
+  position:relative;
+  overflow:hidden;
+}
+.feature-card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--c1,var(--teal)),var(--c2,var(--teal-l)));
+  opacity:0;transition:opacity var(--tr);
+}
+.feature-card:hover{transform:translateY(-4px);box-shadow:var(--sh2)}
+.feature-card:hover::before{opacity:1}
+.feature-icon{
+  font-size:32px;margin-bottom:14px;
+  display:block;
+}
+.feature-title{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:8px}
+.feature-desc{font-size:13.5px;color:var(--s500);line-height:1.6}
+
+/* ============================================================
+   MINI PHONE SCREENS
+   ============================================================ */
+.screen-demo{
+  background:linear-gradient(145deg,#0f172a,#1e3a38);
+  border-radius:20px;
+  padding:20px 16px;
+  font-family:"SF Mono","Fira Code",monospace;
+  font-size:11px;
+  color:rgba(255,255,255,.75);
+  position:relative;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:var(--sh2);
+}
+.screen-demo::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:30px;
+  background:rgba(255,255,255,.04);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.sd-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;padding-bottom:10px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  padding-top:2px;
+}
+.sd-title{color:white;font-weight:800;font-size:13px;font-family:inherit}
+.sd-back{color:var(--teal-l);font-size:11px;cursor:pointer}
+.sd-item{
+  background:rgba(255,255,255,.06);border-radius:10px;
+  padding:10px 12px;margin-bottom:8px;
+  border:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;
+  animation:sdItem .4s ease backwards;
+}
+.sd-item:nth-child(2){animation-delay:.1s}
+.sd-item:nth-child(3){animation-delay:.2s}
+.sd-item:nth-child(4){animation-delay:.3s}
+@keyframes sdItem{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+.sd-name{color:white;font-size:11px;font-weight:700;font-family:-apple-system,sans-serif}
+.sd-meta{color:rgba(255,255,255,.4);font-size:10px;font-family:-apple-system,sans-serif}
+.sd-badge{
+  padding:3px 8px;border-radius:999px;font-size:9px;font-weight:800;
+  font-family:-apple-system,sans-serif;
+}
+.sd-badge-green{background:rgba(16,185,129,.2);color:#6ee7b7}
+.sd-badge-amber{background:rgba(245,158,11,.2);color:#fcd34d}
+.sd-btn{
+  width:100%;margin-top:10px;padding:10px;
+  border-radius:10px;
+  background:linear-gradient(90deg,var(--teal),var(--teal-l));
+  color:#fff;font-weight:800;font-size:11px;
+  text-align:center;font-family:-apple-system,sans-serif;
+}
+
+/* ============================================================
+   SECTION: GETTING STARTED  (alternating layout)
+   ============================================================ */
+.two-col{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:48px;
+  align-items:center;
+}
+.two-col.reverse{direction:rtl}
+.two-col.reverse > *{direction:ltr}
+@media(max-width:720px){
+  .two-col,.two-col.reverse{grid-template-columns:1fr}
+}
+
+/* ============================================================
+   TIP BOX
+   ============================================================ */
+.tip-box{
+  display:flex;gap:12px;
+  padding:16px 18px;
+  border-radius:var(--r);
+  border-left:4px solid;
+  margin:20px 0;
+  font-size:14px;
+}
+.tip-box-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.tip-box-body{color:var(--s700);line-height:1.6}
+.tip-box-body strong{color:var(--navy);display:block;margin-bottom:2px;font-size:14.5px}
+.tip-info  {background:var(--teal-bg);border-color:var(--teal-l)}
+.tip-warn  {background:#fffbeb;border-color:var(--amber)}
+.tip-danger{background:#fff1f2;border-color:var(--rose)}
+.tip-purple{background:#faf5ff;border-color:var(--indigo)}
+
+/* ============================================================
+   MODULE CARDS (big grid)
+   ============================================================ */
+.modules-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:24px;
+}
+.module-card{
+  background:var(--white);
+  border:1px solid var(--s300);
+  border-radius:var(--rx);
+  padding:28px 24px 24px;
+  box-shadow:var(--sh);
+  transition:all var(--tr);
+  cursor:pointer;
+}
+.module-card:hover{transform:translateY(-5px);box-shadow:var(--sh2)}
+.module-card-top{
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:14px;
+}
+.module-card-icon{
+  width:48px;height:48px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;flex-shrink:0;
+}
+.module-card-title{font-size:17px;font-weight:800;color:var(--navy)}
+.module-card-desc{font-size:13.5px;color:var(--s500);line-height:1.6;margin-bottom:16px}
+.module-card-tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{
+  padding:3px 9px;border-radius:999px;
+  font-size:11px;font-weight:700;
+  background:var(--s100);color:var(--s500);
+}
+
+/* ============================================================
+   FAQ ACCORDION
+   ============================================================ */
+.faq{border:1px solid var(--s300);border-radius:var(--rx);overflow:hidden;box-shadow:var(--sh)}
+.faq-item{border-bottom:1px solid var(--s100)}
+.faq-item:last-child{border-bottom:none}
+.faq-q{
+  width:100%;background:none;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px;text-align:left;
+  font-size:15px;font-weight:700;color:var(--navy);
+  transition:background var(--tr);gap:12px;
+}
+.faq-q:hover{background:var(--teal-bg)}
+.faq-q.open{background:var(--teal-bg);color:var(--teal)}
+.faq-arrow{
+  font-size:18px;transition:transform var(--tr);flex-shrink:0;
+  color:var(--s500);
+}
+.faq-q.open .faq-arrow{transform:rotate(180deg);color:var(--teal)}
+.faq-a{
+  max-height:0;overflow:hidden;
+  transition:max-height .35s ease,padding .35s ease;
+  padding:0 22px;
+  font-size:14.5px;color:var(--s700);line-height:1.7;
+  background:var(--white);
+}
+.faq-a.open{max-height:400px;padding:14px 22px 20px}
+
+/* ============================================================
+   BADGE INLINE
+   ============================================================ */
+.badge{
+  display:inline-block;padding:2px 9px;border-radius:999px;
+  font-size:12px;font-weight:700;
+}
+.badge-teal  {background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-xl)}
+.badge-amber {background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.badge-rose  {background:#fff1f2;color:#9f1239;border:1px solid #fecdd3}
+.badge-purple{background:#faf5ff;color:#6d28d9;border:1px solid #ddd6fe}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer{
+  background:var(--navy);
+  color:rgba(255,255,255,.5);
+  text-align:center;
+  padding:48px 24px;
+  font-size:13px;
+}
+footer strong{color:rgba(255,255,255,.9)}
+footer .footer-logo{font-size:28px;margin-bottom:10px}
+
+/* ============================================================
+   SECTION BG VARIANTS
+   ============================================================ */
+.bg-white {background:var(--white)}
+.bg-light {background:var(--s50)}
+.bg-teal  {background:linear-gradient(135deg,#0c1a2e 0%,#0f3d38 100%)}
+.bg-teal  .section-title,.bg-teal h2{color:white}
+.bg-teal  .section-subtitle,.bg-teal p,.bg-teal li{color:rgba(255,255,255,.72)}
+.bg-teal  .section-eyebrow{background:rgba(255,255,255,.1);color:var(--teal-xl);border-color:rgba(255,255,255,.2)}
+
+/* ============================================================
+   TIMELINE (Admin section)
+   ============================================================ */
+.timeline{position:relative;padding-left:36px}
+.timeline::before{
+  content:'';position:absolute;left:10px;top:6px;bottom:6px;
+  width:2px;background:var(--s300);border-radius:2px;
+}
+.tl-item{position:relative;margin-bottom:28px}
+.tl-dot{
+  position:absolute;left:-30px;top:4px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--teal);border:3px solid var(--white);
+  box-shadow:0 0 0 2px var(--teal);
+}
+.tl-title{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.tl-desc{font-size:14px;color:var(--s700);line-height:1.6}
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+kbd{
+  display:inline-block;padding:2px 7px;
+  border:1px solid var(--s300);border-bottom-width:2px;
+  border-radius:5px;font-size:12px;font-weight:700;
+  background:var(--s50);color:var(--s700);
+  font-family:"SF Mono","Fira Code",monospace;
+}
+
+/* ============================================================
+   TOAST DEMO
+   ============================================================ */
+.toast-demo{
+  background:var(--navy);border-radius:12px;padding:12px 16px;
+  display:flex;align-items:center;gap:12px;max-width:320px;
+  box-shadow:var(--sh2);
+}
+.toast-icon{font-size:20px}
+.toast-text{font-size:13px;color:rgba(255,255,255,.85);font-weight:600}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:768px){
+  section{padding:56px 20px}
+  .nav-links{display:none}
+  #mobile-menu-btn{display:block}
+  .hero-phone{display:none}
+  .hero-buttons{flex-direction:column;align-items:center}
+}
+@media(max-width:480px){
+  .features-grid,.modules-grid{grid-template-columns:1fr}
+}
+
+/* ============================================================
+   SMOOTH SCROLL INDICATOR (section dots)
+   ============================================================ */
+#section-dots{
+  position:fixed;right:18px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:8px;z-index:900;
+}
+.dot-nav{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--s300);cursor:pointer;
+  transition:all var(--tr);
+}
+.dot-nav.active,.dot-nav:hover{background:var(--teal);transform:scale(1.4)}
+@media(max-width:900px){#section-dots{display:none}}
+
+/* ============================================================
+   ANIMATED COUNTER
+   ============================================================ */
+.counter{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<!-- PROGRESS BAR -->
+<div id="progress-bar"></div>
+
+<!-- SECTION DOTS -->
+<div id="section-dots">
+  <div class="dot-nav active" data-target="hero" title="Inicio"></div>
+  <div class="dot-nav" data-target="intro" title="¿Qué es?"></div>
+  <div class="dot-nav" data-target="start" title="Primeros pasos"></div>
+  <div class="dot-nav" data-target="lista" title="Lista"></div>
+  <div class="dot-nav" data-target="surtir" title="Surtir"></div>
+  <div class="dot-nav" data-target="tiendas" title="Tiendas"></div>
+  <div class="dot-nav" data-target="epocas" title="Épocas"></div>
+  <div class="dot-nav" data-target="reportes" title="Reportes"></div>
+  <div class="dot-nav" data-target="admin" title="Admin"></div>
+  <div class="dot-nav" data-target="faq" title="FAQ"></div>
+</div>
+
+<!-- TOPNAV -->
+<nav id="topnav">
+  <a class="nav-logo" href="#hero">
+    <div class="nav-logo-icon">🛒</div>
+    <div>
+      <div class="nav-logo-text">SúperApp</div>
+      <div class="nav-logo-sub">Manual de usuario</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="#start">Primeros pasos</a>
+    <a class="nav-link" href="#lista">Lista</a>
+    <a class="nav-link" href="#surtir">Surtir</a>
+    <a class="nav-link" href="#tiendas">Tiendas</a>
+    <a class="nav-link" href="#epocas">Épocas</a>
+    <a class="nav-link" href="#reportes">Reportes</a>
+    <a class="nav-link" href="#admin">Admin</a>
+    <a class="nav-link" href="#faq">FAQ</a>
+  </div>
+  <button id="mobile-menu-btn">☰</button>
+</nav>
+<div id="mobile-nav">
+  <a href="#start">Primeros pasos</a>
+  <a href="#lista">Lista de compras</a>
+  <a href="#surtir">Surtir artículos</a>
+  <a href="#tiendas">Tiendas</a>
+  <a href="#epocas">Épocas</a>
+  <a href="#reportes">Reportes</a>
+  <a href="#admin">Administración</a>
+  <a href="#faq">Preguntas frecuentes</a>
+</div>
+
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<section id="hero">
+  <div class="hero-blob"></div>
+  <div class="hero-blob"></div>
+  <div class="hero-blob"></div>
+
+  <div class="hero-phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="phone-title">Lista compartida</div>
+      <div class="phone-item"><div class="phone-dot"></div><div><div class="phone-line"></div><div class="phone-line-sm" style="margin-top:3px"></div></div></div>
+      <div class="phone-item"><div class="phone-dot" style="background:var(--amber)"></div><div><div class="phone-line"></div><div class="phone-line-sm" style="margin-top:3px"></div></div></div>
+      <div class="phone-item"><div class="phone-dot"></div><div><div class="phone-line"></div><div class="phone-line-sm" style="margin-top:3px"></div></div></div>
+      <div class="phone-cta"><span class="phone-cta-text">＋ Añadir artículo</span></div>
+    </div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-eyebrow">📖 Manual de Usuario · v1.0</div>
+    <h1 class="hero-title">Tu guía para<br><span>SúperApp</span></h1>
+    <p class="hero-subtitle">
+      Todo lo que necesitas saber para organizar las compras de tu hogar, registrar gastos y nunca olvidar un artículo.
+    </p>
+    <div class="hero-buttons">
+      <a class="btn-primary" href="#start">Comenzar ahora →</a>
+      <a class="btn-secondary" href="#intro">¿Qué es SúperApp?</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num counter" data-target="8">0</div>
+        <div class="hero-stat-lbl">Módulos</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num counter" data-target="5">0</div>
+        <div class="hero-stat-lbl">Tipos de reporte</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">∞</div>
+        <div class="hero-stat-lbl">Artículos</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-cue">
+    <span>Desplázate</span>
+    <span class="scroll-cue-arrow">↓</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     INTRO
+     ============================================================ -->
+<section id="intro" class="bg-white">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">🛒 Bienvenida</div>
+      <h2 class="section-title">¿Qué es SúperApp?</h2>
+      <p class="section-subtitle">Una app colaborativa para gestionar las compras de tu hogar, de principio a fin.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card reveal d1" style="--c1:#0f766e;--c2:#14b8a6">
+        <span class="feature-icon">📋</span>
+        <div class="feature-title">Lista compartida</div>
+        <div class="feature-desc">Todos los miembros del hogar ven y modifican la misma lista en tiempo real, desde sus propios teléfonos.</div>
+      </div>
+      <div class="feature-card reveal d2" style="--c1:#f59e0b;--c2:#fbbf24">
+        <span class="feature-icon">🛍️</span>
+        <div class="feature-title">Registro de compras</div>
+        <div class="feature-desc">Al comprar un artículo, guarda el precio pagado y la tienda. Construye un historial completo de gastos.</div>
+      </div>
+      <div class="feature-card reveal d3" style="--c1:#6366f1;--c2:#818cf8">
+        <span class="feature-icon">📊</span>
+        <div class="feature-title">Reportes inteligentes</div>
+        <div class="feature-desc">Analiza tendencias de precios, detecta dónde compras más barato y controla el gasto por tienda.</div>
+      </div>
+      <div class="feature-card reveal d4" style="--c1:#f43f5e;--c2:#fb7185">
+        <span class="feature-icon">📡</span>
+        <div class="feature-title">Actividad en tiempo real</div>
+        <div class="feature-desc">Recibe notificaciones cuando otro miembro agrega o surte un artículo, sin importar dónde estén.</div>
+      </div>
+      <div class="feature-card reveal d5" style="--c1:#10b981;--c2:#34d399">
+        <span class="feature-icon">📅</span>
+        <div class="feature-title">Épocas del año</div>
+        <div class="feature-desc">Clasifica gastos por temporadas (Navidad, Quincena, Verano…) para análisis más detallados.</div>
+      </div>
+      <div class="feature-card reveal d1" style="--c1:#0f766e;--c2:#6366f1">
+        <span class="feature-icon">🔁</span>
+        <div class="feature-title">Reposición rápida</div>
+        <div class="feature-desc">Vuelve a agregar artículos que ya compraste antes con un solo toque, con precio y tienda pre-rellenados.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PRIMEROS PASOS
+     ============================================================ -->
+<section id="start" class="bg-light">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">🚀 Primeros pasos</div>
+      <h2 class="section-title">Empieza a usar SúperApp</h2>
+      <p class="section-subtitle">Sigue estos pasos para crear tu cuenta y comenzar a usar la app.</p>
+    </div>
+
+    <div class="two-col">
+      <div class="steps-grid reveal-left">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Crea tu cuenta</h3>
+            <p>Ingresa tu nombre, correo electrónico y una contraseña de al menos 6 caracteres. Toca <strong>"Crear cuenta"</strong>.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Espera aprobación</h3>
+            <p>Tu cuenta queda en estado <span class="badge badge-amber">Pendiente</span>. Un administrador del hogar debe aprobarla antes de que puedas entrar.</p>
+            <span class="tip">⏳ Avisa al admin para que te apruebe</span>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>¡Acceso automático!</h3>
+            <p>Cuando el admin te apruebe, la app detecta el cambio en tiempo real y te lleva directo al inicio sin necesidad de recargar.</p>
+            <span class="tip">✅ No necesitas cerrar y abrir la app</span>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>Verifica tu hogar</h3>
+            <p>En la pantalla de Lista verás tu <strong>Hogar</strong> y tu <strong>Nombre de usuario</strong>. Si aparece "Sin configurar", pide al admin que te asigne un hogar.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-right">
+        <div class="screen-demo">
+          <div class="sd-header">
+            <span class="sd-title">Autenticación</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <div style="flex:1;padding:7px 10px;border-radius:7px;background:linear-gradient(90deg,var(--teal),var(--teal-l));color:white;font-size:10px;font-weight:800;text-align:center;font-family:-apple-system,sans-serif">Iniciar sesión</div>
+            <div style="flex:1;padding:7px 10px;border-radius:7px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);font-size:10px;font-weight:700;text-align:center;font-family:-apple-system,sans-serif;border:1px solid rgba(255,255,255,.1)">Registrarme</div>
+          </div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:4px;font-family:-apple-system,sans-serif">CORREO</div>
+            <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:8px 10px;font-size:10px;color:rgba(255,255,255,.7);font-family:-apple-system,sans-serif">maria@ejemplo.com</div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:4px;font-family:-apple-system,sans-serif">CONTRASEÑA</div>
+            <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:8px 10px;font-size:10px;color:rgba(255,255,255,.4);font-family:-apple-system,sans-serif">••••••••</div>
+          </div>
+          <div class="sd-btn">Entrar</div>
+        </div>
+
+        <div class="tip-box tip-info" style="margin-top:16px">
+          <span class="tip-box-icon">💡</span>
+          <div class="tip-box-body">
+            <strong>¿Ya tienes cuenta?</strong>
+            Si ya te registraste antes y cierras sesión, vuelve a entrar con el mismo correo y contraseña. Tu hogar y datos se conservan.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     LISTA DE COMPRAS
+     ============================================================ -->
+<section id="lista" class="bg-white">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">📋 Módulo principal</div>
+      <h2 class="section-title">Lista de Compras</h2>
+      <p class="section-subtitle">El corazón de SúperApp. Todos los miembros del hogar comparten y ven la misma lista en tiempo real.</p>
+    </div>
+
+    <div class="two-col reverse" style="margin-bottom:56px">
+      <div class="reveal-right">
+        <div class="screen-demo">
+          <div class="sd-header">
+            <span class="sd-title">Lista compartida</span>
+            <span class="sd-back">Hogar: casa-familia</span>
+          </div>
+          <div class="sd-item">
+            <div><div class="sd-name">🥛 Leche entera</div><div class="sd-meta">x2 · ~$48.00</div></div>
+            <div style="display:flex;gap:5px">
+              <div class="sd-badge sd-badge-amber">Editar</div>
+              <div class="sd-badge sd-badge-green">Surtir</div>
+            </div>
+          </div>
+          <div class="sd-item">
+            <div><div class="sd-name">🍞 Pan integral</div><div class="sd-meta">x1 · ~$35.00 · Walmart</div></div>
+            <div style="display:flex;gap:5px">
+              <div class="sd-badge sd-badge-amber">Editar</div>
+              <div class="sd-badge sd-badge-green">Surtir</div>
+            </div>
+          </div>
+          <div class="sd-item">
+            <div><div class="sd-name">🧴 Jabón líquido</div><div class="sd-meta">x3 · sin precio</div></div>
+            <div style="display:flex;gap:5px">
+              <div class="sd-badge sd-badge-amber">Editar</div>
+              <div class="sd-badge sd-badge-green">Surtir</div>
+            </div>
+          </div>
+          <div class="sd-btn">＋ Añadir artículo</div>
+        </div>
+      </div>
+
+      <div class="reveal-left">
+        <h3 style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:16px">Cómo agregar artículos</h3>
+
+        <div class="steps-grid" style="gap:14px">
+          <div class="step-card" style="padding:16px 18px">
+            <div class="step-num" style="width:32px;height:32px;font-size:13px">1</div>
+            <div class="step-body">
+              <h3 style="font-size:14px">Toca "＋ Añadir artículo"</h3>
+              <p style="font-size:13px">El formulario se abre desde la parte superior de la lista.</p>
+            </div>
+          </div>
+          <div class="step-card" style="padding:16px 18px">
+            <div class="step-num" style="width:32px;height:32px;font-size:13px">2</div>
+            <div class="step-body">
+              <h3 style="font-size:14px">Escribe el nombre</h3>
+              <p style="font-size:13px">Aparecerán sugerencias de artículos ya en la lista y del historial de compras anteriores.</p>
+            </div>
+          </div>
+          <div class="step-card" style="padding:16px 18px">
+            <div class="step-num" style="width:32px;height:32px;font-size:13px">3</div>
+            <div class="step-body">
+              <h3 style="font-size:14px">Llena cantidad y precio</h3>
+              <p style="font-size:13px">El precio estimado es opcional pero te ayuda a planear el gasto.</p>
+            </div>
+          </div>
+          <div class="step-card" style="padding:16px 18px">
+            <div class="step-num" style="width:32px;height:32px;font-size:13px">4</div>
+            <div class="step-body">
+              <h3 style="font-size:14px">Guarda</h3>
+              <p style="font-size:13px">El artículo aparece al instante en la lista de todos los miembros.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal">
+      <h3 style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:20px">Acciones disponibles por artículo</h3>
+    </div>
+
+    <div class="features-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+      <div class="feature-card reveal d1" style="--c1:#10b981;--c2:#34d399">
+        <span class="feature-icon">✏️</span>
+        <div class="feature-title">Editar</div>
+        <div class="feature-desc">Modifica nombre, cantidad, precio estimado o tienda preferida. El formulario se llena automáticamente.</div>
+      </div>
+      <div class="feature-card reveal d2" style="--c1:#f43f5e;--c2:#fb7185">
+        <span class="feature-icon">🗑️</span>
+        <div class="feature-title">Quitar</div>
+        <div class="feature-desc">Elimina el artículo de la lista sin registrar una compra. Útil si ya no lo necesitas.</div>
+      </div>
+      <div class="feature-card reveal d3" style="--c1:#0f766e;--c2:#14b8a6">
+        <span class="feature-icon">✅</span>
+        <div class="feature-title">Surtir</div>
+        <div class="feature-desc">Marca el artículo como comprado. Abre el formulario para registrar precio real y tienda.</div>
+      </div>
+    </div>
+
+    <div class="tip-box tip-info reveal" style="margin-top:8px">
+      <span class="tip-box-icon">🔁</span>
+      <div class="tip-box-body">
+        <strong>Reposición masiva</strong>
+        ¿Necesitas volver a comprar varios artículos que ya compraste antes? Usa el botón de <strong>Reposición</strong> para seleccionarlos del historial y agregarlos todos a la vez, con precio y tienda pre-rellenados.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SURTIR
+     ============================================================ -->
+<section id="surtir" class="bg-teal">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">🛍️ Compras</div>
+      <h2 class="section-title">Surtir un artículo</h2>
+      <p class="section-subtitle">Cuando compres algo, regístralo en la app para llevar el control del gasto y el historial de precios.</p>
+    </div>
+
+    <div class="two-col">
+      <div class="steps-grid reveal-left">
+        <div class="step-card" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3 style="color:white">Toca "Surtir" en el artículo</h3>
+            <p style="color:rgba(255,255,255,.7)">Se abre un modal para registrar los detalles de la compra.</p>
+          </div>
+        </div>
+        <div class="step-card" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3 style="color:white">Selecciona la tienda</h3>
+            <p style="color:rgba(255,255,255,.7)">Si el artículo tenía tienda preferida, aparece pre-seleccionada. Puedes buscar y cambiarla.</p>
+          </div>
+        </div>
+        <div class="step-card" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3 style="color:white">Captura el precio pagado</h3>
+            <p style="color:rgba(255,255,255,.7)">Si tenías precio estimado, aparece pre-rellenado. Solo corrígelo si fue diferente. El precio puede ser $0.</p>
+          </div>
+        </div>
+        <div class="step-card" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3 style="color:white">Confirma la compra</h3>
+            <p style="color:rgba(255,255,255,.7)">El artículo desaparece de la lista y queda guardado en el historial de compras con fecha, tienda y época automática.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-right">
+        <div class="screen-demo">
+          <div class="sd-header">
+            <span class="sd-title">Surtir artículo</span>
+            <span class="sd-back">✕</span>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px;margin-bottom:12px;border:1px solid rgba(255,255,255,.08)">
+            <div style="font-size:11px;color:white;font-weight:800;font-family:-apple-system,sans-serif">🥛 Leche entera</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.4);font-family:-apple-system,sans-serif;margin-top:3px">Cantidad: 2 · Estimado: $48.00</div>
+          </div>
+          <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,.5);margin-bottom:6px;font-family:-apple-system,sans-serif">TIENDA</div>
+          <div style="background:rgba(15,118,110,.3);border:1.5px solid var(--teal-l);border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:11px;color:var(--teal-xl);font-weight:700;font-family:-apple-system,sans-serif">✓ Walmart Insurgentes</div>
+          <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,.5);margin-bottom:6px;font-family:-apple-system,sans-serif">PRECIO PAGADO (TOTAL)</div>
+          <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:white;font-weight:700;font-family:-apple-system,sans-serif">$46.00</div>
+          <div class="sd-btn">Confirmar compra</div>
+        </div>
+
+        <div class="tip-box tip-warn" style="margin-top:16px">
+          <span class="tip-box-icon">⚡</span>
+          <div class="tip-box-body">
+            <strong>Operación atómica</strong>
+            La app guarda la compra y elimina el artículo de la lista en una sola operación. Si hay error de red, nada se pierde — o todo se guarda o nada cambia.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal" style="margin-top:48px">
+      <div class="toast-demo" style="margin:0 auto">
+        <span class="toast-icon">📡</span>
+        <span class="toast-text">María surtió: Leche entera</span>
+      </div>
+      <p style="text-align:center;font-size:13px;color:rgba(255,255,255,.4);margin-top:10px">
+        Los demás miembros del hogar reciben esta notificación automáticamente
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TIENDAS
+     ============================================================ -->
+<section id="tiendas" class="bg-light">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">🏪 Catálogo</div>
+      <h2 class="section-title">Tiendas</h2>
+      <p class="section-subtitle">El catálogo de establecimientos donde compras. Es necesario para registrar compras y analizar precios por tienda.</p>
+    </div>
+
+    <div class="two-col">
+      <div class="reveal-left">
+        <h3 style="font-size:18px;font-weight:800;margin-bottom:16px">¿Cómo agregar una tienda?</h3>
+        <div class="steps-grid" style="gap:14px">
+          <div class="step-card" style="padding:14px 16px">
+            <div class="step-num" style="width:30px;height:30px;font-size:13px">1</div>
+            <div class="step-body">
+              <h3 style="font-size:14px">Toca "＋ Agregar tienda"</h3>
+              <p style="font-size:13px">El formulario aparece en la parte superior de la pantalla de Tiendas.</p>
+            </div>
+          </div>
+          <div class="step-card" style="padding:14px 16px">
+            <div class="step-num" style="width:30px;height:30px;font-size:13px">2</div>
+            <div class="step-body">
+              <h3 style="font-size:14px">Escribe el nombre</h3>
+              <p style="font-size:13px">La app detecta automáticamente si ya existe una tienda con nombre similar y te avisa.</p>
+            </div>
+          </div>
+          <div class="step-card" style="padding:14px 16px">
+            <div class="step-num" style="width:30px;height:30px;font-size:13px">3</div>
+            <div class="step-body">
+              <h3 style="font-size:14px">Guarda</h3>
+              <p style="font-size:13px">La tienda queda disponible de inmediato para todos al surtir artículos.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="tip-box tip-warn" style="margin-top:8px">
+          <span class="tip-box-icon">⚠️</span>
+          <div class="tip-box-body">
+            <strong>Posibles duplicados</strong>
+            Si escribes "Soriana" y ya existe "soriana" o "Soriana Norte", la app lo detectará y te ofrecerá usar la existente en lugar de crear una repetida.
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-right">
+        <div class="screen-demo">
+          <div class="sd-header">
+            <span class="sd-title">Tiendas</span>
+          </div>
+          <div class="sd-item">
+            <div><div class="sd-name">Walmart Insurgentes</div><div class="sd-meta">Última compra: hoy</div></div>
+            <div style="display:flex;gap:5px">
+              <div class="sd-badge" style="background:rgba(99,102,241,.2);color:#a5b4fc;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;font-family:-apple-system,sans-serif">Editar</div>
+            </div>
+          </div>
+          <div class="sd-item">
+            <div><div class="sd-name">Soriana Hiper</div><div class="sd-meta">Última compra: hace 3 días</div></div>
+            <div style="display:flex;gap:5px">
+              <div class="sd-badge" style="background:rgba(99,102,241,.2);color:#a5b4fc;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;font-family:-apple-system,sans-serif">Editar</div>
+            </div>
+          </div>
+          <div class="sd-item">
+            <div><div class="sd-name">Chedraui</div><div class="sd-meta">Última compra: hace 1 sem.</div></div>
+          </div>
+          <div class="sd-btn">＋ Agregar tienda</div>
+        </div>
+
+        <div class="tip-box tip-purple" style="margin-top:16px">
+          <span class="tip-box-icon">🔐</span>
+          <div class="tip-box-body">
+            <strong>Permisos</strong>
+            Cualquier miembro puede <strong>agregar</strong> tiendas. Solo el <span class="badge badge-teal">admin</span> puede <strong>editar</strong> o <strong>eliminar</strong> tiendas ya existentes.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     ÉPOCAS
+     ============================================================ -->
+<section id="epocas" class="bg-white">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">📅 Temporadas</div>
+      <h2 class="section-title">Épocas del año</h2>
+      <p class="section-subtitle">Clasifica automáticamente las compras según la temporada del año en que se realizaron.</p>
+    </div>
+
+    <div class="two-col reverse" style="margin-bottom:40px">
+      <div class="reveal-right">
+        <div class="screen-demo">
+          <div class="sd-header">
+            <span class="sd-title">Épocas</span>
+          </div>
+          <div class="sd-item">
+            <div>
+              <div class="sd-name">🎄 Navidad</div>
+              <div class="sd-meta">15/12 — 02/02</div>
+            </div>
+            <div class="sd-badge sd-badge-green">Activa</div>
+          </div>
+          <div class="sd-item">
+            <div>
+              <div class="sd-name">☀️ Verano</div>
+              <div class="sd-meta">01/06 — 31/08</div>
+            </div>
+            <div class="sd-badge" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:9px;padding:2px 7px;border-radius:999px;font-family:-apple-system,sans-serif">Inactiva</div>
+          </div>
+          <div class="sd-item">
+            <div>
+              <div class="sd-name">💰 Quincena</div>
+              <div class="sd-meta">01/01 — 31/12</div>
+            </div>
+            <div class="sd-badge sd-badge-green">Activa</div>
+          </div>
+          <div class="sd-btn">＋ Nueva época</div>
+        </div>
+      </div>
+
+      <div class="reveal-left">
+        <h3 style="font-size:18px;font-weight:800;margin-bottom:14px">¿Para qué sirven?</h3>
+        <p style="color:var(--s700);font-size:14.5px;margin-bottom:16px">
+          Cuando surtes un artículo, SúperApp detecta automáticamente en qué época estás y etiqueta la compra. Luego puedes filtrar reportes por época para comparar gastos entre temporadas.
+        </p>
+
+        <div class="tip-box tip-info">
+          <span class="tip-box-icon">🔄</span>
+          <div class="tip-box-body">
+            <strong>Épocas recurrentes</strong>
+            Las épocas se repiten cada año automáticamente. Si "Navidad" corre del 15/12 al 02/02, aplica en cada diciembre y enero sin configurarla de nuevo.
+          </div>
+        </div>
+
+        <div class="tip-box tip-warn" style="margin-top:0">
+          <span class="tip-box-icon">🗓️</span>
+          <div class="tip-box-body">
+            <strong>Cruce de año nuevo</strong>
+            Las épocas pueden cruzar el fin de año. Ejemplo: Navidad del 15/12 al 02/02 funciona correctamente aunque abarque dos años.
+          </div>
+        </div>
+
+        <div class="tip-box tip-purple" style="margin-top:0">
+          <span class="tip-box-icon">🔐</span>
+          <div class="tip-box-body">
+            <strong>Solo admins</strong>
+            Solo el <span class="badge badge-teal">admin</span> puede crear, activar/desactivar o eliminar épocas.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     REPORTES
+     ============================================================ -->
+<section id="reportes" class="bg-light">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">📊 Análisis</div>
+      <h2 class="section-title">Reportes</h2>
+      <p class="section-subtitle">Cinco vistas de análisis para tomar mejores decisiones de compra y controlar el gasto del hogar.</p>
+    </div>
+
+    <div class="modules-grid">
+      <div class="module-card reveal d1">
+        <div class="module-card-top">
+          <div class="module-card-icon" style="background:#f0fdfa">📋</div>
+          <div class="module-card-title">Pendientes</div>
+        </div>
+        <div class="module-card-desc">Lista los artículos que aún no has comprado, con filtros por fecha de creación y nombre.</div>
+        <div class="module-card-tags">
+          <span class="tag">Fecha</span><span class="tag">Nombre</span>
+        </div>
+      </div>
+
+      <div class="module-card reveal d2">
+        <div class="module-card-top">
+          <div class="module-card-icon" style="background:#ecfdf5">🛍️</div>
+          <div class="module-card-title">Surtidos</div>
+        </div>
+        <div class="module-card-desc">Historial completo de compras realizadas. Filtra por fecha, tienda, época y nombre de artículo.</div>
+        <div class="module-card-tags">
+          <span class="tag">Fecha</span><span class="tag">Tienda</span><span class="tag">Época</span><span class="tag">Artículo</span>
+        </div>
+      </div>
+
+      <div class="module-card reveal d3">
+        <div class="module-card-top">
+          <div class="module-card-icon" style="background:#fef3c7">📈</div>
+          <div class="module-card-title">Tendencia de precio</div>
+        </div>
+        <div class="module-card-desc">¿Cómo ha cambiado el precio de un artículo mes a mes? Filtra por tiendas para comparar.</div>
+        <div class="module-card-tags">
+          <span class="tag">Artículo</span><span class="tag">Tiendas</span><span class="tag">Por mes</span>
+        </div>
+      </div>
+
+      <div class="module-card reveal d4">
+        <div class="module-card-top">
+          <div class="module-card-icon" style="background:#faf5ff">🏆</div>
+          <div class="module-card-title">Mejor precio</div>
+        </div>
+        <div class="module-card-desc">¿En qué tienda has encontrado el menor precio unitario para un artículo? Compara todos tus historiales.</div>
+        <div class="module-card-tags">
+          <span class="tag">Artículo</span><span class="tag">Por tienda</span>
+        </div>
+      </div>
+
+      <div class="module-card reveal d5">
+        <div class="module-card-top">
+          <div class="module-card-icon" style="background:#fff1f2">💰</div>
+          <div class="module-card-title">Gasto por tienda</div>
+        </div>
+        <div class="module-card-desc">Cuánto has gastado en total en cada tienda dentro de un rango de fechas o época. Ordena de mayor a menor.</div>
+        <div class="module-card-tags">
+          <span class="tag">Fecha</span><span class="tag">Época</span><span class="tag">Por tienda</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-box tip-info reveal">
+      <span class="tip-box-icon">⚡</span>
+      <div class="tip-box-body">
+        <strong>Filtros instantáneos</strong>
+        Todos los filtros de reportes funcionan al instante sobre los datos ya cargados. No necesitas esperar consultas al servidor cada vez que cambias un filtro.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     ADMIN
+     ============================================================ -->
+<section id="admin" class="bg-white">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">⚙️ Administración</div>
+      <h2 class="section-title">Pantalla de Administración</h2>
+      <p class="section-subtitle">Exclusiva para administradores. Desde aquí gestiones los usuarios y hogares del sistema.</p>
+    </div>
+
+    <div class="tip-box tip-purple reveal">
+      <span class="tip-box-icon">👑</span>
+      <div class="tip-box-body">
+        <strong>¿Quién puede acceder?</strong>
+        Solo usuarios con <code>rol = admin</code> y <code>aprobado = true</code>. Si no ves esta pantalla en el menú, es porque aún no tienes permisos de admin.
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top:32px">
+      <div class="reveal-left">
+        <h3 style="font-size:18px;font-weight:800;margin-bottom:20px">Lo que puedes hacer</h3>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-title">Crear hogares</div>
+            <div class="tl-desc">Define el ID y nombre del hogar. Este ID es el que se asigna a los usuarios para que vean los mismos datos.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-title">Aprobar / Revocar acceso</div>
+            <div class="tl-desc">Controla quién puede entrar a la app. Aprueba usuarios nuevos o revoca el acceso cuando sea necesario.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-title">Asignar hogar a usuarios</div>
+            <div class="tl-desc">Edita el <code>householdId</code> de cada usuario para que vea la lista, tiendas y épocas correctas.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-title">Cambiar roles</div>
+            <div class="tl-desc">Sube a <span class="badge badge-teal">admin</span> o baja a <span class="badge badge-amber">member</span> a cualquier usuario con un solo toque.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-title">Eliminar perfiles de Firestore</div>
+            <div class="tl-desc">Borra el documento del usuario de la base de datos. La cuenta de Firebase Auth debe eliminarse desde la consola de Firebase por separado.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-right">
+        <div class="screen-demo">
+          <div class="sd-header">
+            <span class="sd-title">Administración</span>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+            <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,.4);margin-bottom:6px;font-family:-apple-system,sans-serif">CREAR HOGAR</div>
+            <div style="background:rgba(255,255,255,.06);border-radius:6px;padding:7px 9px;margin-bottom:6px;font-size:10px;color:rgba(255,255,255,.5);font-family:-apple-system,sans-serif">ID hogar (ej. casa-sergio)</div>
+            <div style="background:rgba(255,255,255,.06);border-radius:6px;padding:7px 9px;margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.5);font-family:-apple-system,sans-serif">Nombre del hogar</div>
+            <div style="background:linear-gradient(90deg,var(--teal),var(--teal-l));border-radius:7px;padding:7px;text-align:center;font-size:10px;font-weight:800;color:white;font-family:-apple-system,sans-serif">Crear hogar</div>
+          </div>
+          <div class="sd-item">
+            <div>
+              <div class="sd-name">María García</div>
+              <div class="sd-meta">Rol: member · Aprobada: Sí</div>
+            </div>
+            <div style="display:flex;gap:4px;flex-direction:column;align-items:flex-end">
+              <div class="sd-badge sd-badge-green">Hacer admin</div>
+              <div class="sd-badge sd-badge-amber">Revocar</div>
+            </div>
+          </div>
+          <div class="sd-item">
+            <div>
+              <div class="sd-name">Pedro López</div>
+              <div class="sd-meta">Rol: member · Aprobado: No</div>
+            </div>
+            <div>
+              <div class="sd-badge sd-badge-green">Aprobar</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tip-box tip-danger" style="margin-top:16px">
+          <span class="tip-box-icon">🚫</span>
+          <div class="tip-box-body">
+            <strong>No puedes eliminarte a ti mismo</strong>
+            La app impide que el admin borre su propio perfil desde esta pantalla como medida de seguridad.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FAQ
+     ============================================================ -->
+<section id="faq" class="bg-light">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">❓ Ayuda</div>
+      <h2 class="section-title">Preguntas frecuentes</h2>
+      <p class="section-subtitle">Respuestas a las dudas más comunes al usar SúperApp.</p>
+    </div>
+
+    <div class="faq reveal">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          ¿Por qué no puedo entrar después de registrarme?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-a">
+          Tu cuenta requiere aprobación de un administrador antes de que puedas acceder. Avísale al admin de tu hogar para que entre a la pantalla de Administración y apruebe tu cuenta. Una vez aprobada, la app te dejará pasar automáticamente.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          La lista aparece vacía aunque el admin me asignó hogar. ¿Qué hago?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-a">
+          Cierra sesión y vuelve a entrar. El <code>householdId</code> se actualiza cuando el admin lo cambia, pero tu sesión local necesita refrescarse para leerlo. Después de volver a entrar la lista debería aparecer.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          ¿Puedo agregar el mismo artículo dos veces?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-a">
+          No. SúperApp detecta artículos duplicados por nombre normalizado. Si intentas agregar "Leche" cuando ya hay una "leche" en la lista, el botón de Guardar se deshabilitará y verás una advertencia. Si quieres aumentar la cantidad, edita el artículo existente.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          ¿Qué pasa si surtí un artículo por error?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-a">
+          La compra queda registrada en el historial y el artículo sale de la lista. No hay forma de deshacer directamente desde la app. Sin embargo, puedes volver a agregar el artículo a la lista manualmente, ya sea escribiendo su nombre o usando la función de Reposición.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          ¿Puedo usar la app sin conexión a internet?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-a">
+          SúperApp requiere conexión a internet para leer y escribir datos en tiempo real. Sin conexión, los datos mostrados pueden estar desactualizados y no podrás guardar cambios hasta que vuelva la conexión.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          ¿Cómo sé en qué época estoy comprando?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-a">
+          No necesitas hacer nada. Cuando surtís un artículo, el sistema detecta automáticamente si la fecha actual cae dentro de alguna época activa y la asigna a la compra. Puedes ver la época de cada compra en los reportes de Surtidos.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          ¿Cómo se calcula el precio unitario?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-a">
+          Es simplemente: <strong>Precio pagado ÷ Cantidad</strong>. Por ejemplo, si pagaste $48 por 2 litros de leche, el precio unitario es $24 por litro. Este valor se guarda automáticamente y se usa en los reportes de Tendencia y Mejor precio.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          ¿Todos los miembros del hogar ven mis compras?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-a">
+          Sí. La lista, el historial de compras, las tiendas y las épocas son compartidos entre todos los miembros del mismo hogar. Esto es por diseño para una gestión colaborativa. La app también muestra notificaciones cuando otro miembro agrega o surte artículos.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer>
+  <div class="footer-logo">🛒</div>
+  <p>
+    <strong>SúperApp</strong> · Manual de Usuario
+  </p>
+  <p style="margin-top:8px;font-size:12px">
+    Organiza · Compra · Ahorra
+  </p>
+</footer>
+
+<script>
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+const bar = document.getElementById('progress-bar');
+window.addEventListener('scroll', () => {
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  bar.style.width = (window.scrollY / total * 100) + '%';
+});
+
+/* ============================================================
+   REVEAL ON SCROLL
+   ============================================================ */
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el => observer.observe(el));
+
+/* ============================================================
+   SECTION DOTS
+   ============================================================ */
+const sections = ['hero','intro','start','lista','surtir','tiendas','epocas','reportes','admin','faq'];
+const dots = document.querySelectorAll('.dot-nav');
+
+function updateDots() {
+  let current = sections[0];
+  for (const id of sections) {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top <= window.innerHeight * .5) current = id;
+  }
+  dots.forEach((d, i) => d.classList.toggle('active', sections[i] === current));
+}
+window.addEventListener('scroll', updateDots, { passive: true });
+
+dots.forEach((d, i) => {
+  d.addEventListener('click', () => {
+    const el = document.getElementById(sections[i]);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+/* ============================================================
+   NAV LINKS ACTIVE
+   ============================================================ */
+const navLinks = document.querySelectorAll('.nav-link');
+window.addEventListener('scroll', () => {
+  let cur = '';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top <= 80) cur = id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + cur);
+  });
+}, { passive: true });
+
+/* ============================================================
+   MOBILE MENU
+   ============================================================ */
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const mobileNav = document.getElementById('mobile-nav');
+mobileMenuBtn.addEventListener('click', () => {
+  const open = mobileNav.style.display === 'block';
+  mobileNav.style.display = open ? 'none' : 'block';
+  mobileMenuBtn.textContent = open ? '☰' : '✕';
+});
+mobileNav.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', () => {
+    mobileNav.style.display = 'none';
+    mobileMenuBtn.textContent = '☰';
+  });
+});
+
+/* ============================================================
+   FAQ ACCORDION
+   ============================================================ */
+function toggleFaq(btn) {
+  const answer = btn.nextElementSibling;
+  const isOpen = answer.classList.contains('open');
+  document.querySelectorAll('.faq-a.open').forEach(a => a.classList.remove('open'));
+  document.querySelectorAll('.faq-q.open').forEach(b => b.classList.remove('open'));
+  if (!isOpen) {
+    answer.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+/* ============================================================
+   ANIMATED COUNTERS
+   ============================================================ */
+function animateCount(el, target, duration = 1200) {
+  let start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    const progress = Math.min((ts - start) / duration, 1);
+    el.textContent = Math.floor(progress * target);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(step);
+}
+
+const counterObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const target = parseInt(e.target.dataset.target);
+      animateCount(e.target, target);
+      counterObserver.unobserve(e.target);
+    }
+  });
+}, { threshold: .5 });
+document.querySelectorAll('.counter[data-target]').forEach(el => counterObserver.observe(el));
+</script>
+</body>
+</html>
