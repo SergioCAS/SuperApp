@@ -18,12 +18,18 @@ import {
   doc,
   onSnapshot,
   orderBy,
-  query
+  query,
+  where
 } from "firebase/firestore";
 import { auth, db } from "../src/config/firebase";
 
 type UserProfile = {
   householdId?: string;
+};
+
+type UserInfo = {
+  uid: string;
+  displayName: string;
 };
 
 type PendingItem = {
@@ -32,6 +38,7 @@ type PendingItem = {
   quantity: number;
   estimatedPrice?: number;
   estimatedUnitPrice?: number;
+  addedByUid: string;
   createdAt?: Timestamp;
 };
 
@@ -45,6 +52,7 @@ type PurchaseItem = {
   storeId: string;
   storeName: string;
   seasonId?: string;
+  purchasedByUid: string;
   purchasedAt?: Timestamp;
 };
 
@@ -92,9 +100,17 @@ type DateFieldKey =
   | "suppliedFrom"
   | "suppliedTo"
   | "spendFrom"
-  | "spendTo";
+  | "spendTo"
+  | "budgetFrom"
+  | "budgetTo"
+  | "byuserFrom"
+  | "byuserTo"
+  | "additionsFrom"
+  | "additionsTo";
 
-type ReportKey = "pending" | "supplied" | "trend" | "best" | "spend";
+type ReportKey = "pending" | "supplied" | "trend" | "best" | "spend" | "budget" | "byuser" | "additions";
+
+type BudgetPeriod = "week" | "fortnight" | "month" | "custom";
 
 function asTextError(error: unknown) {
   if (error instanceof Error) {
@@ -165,6 +181,42 @@ function formatDate(value?: Timestamp) {
   return value.toDate().toLocaleString("es-MX");
 }
 
+function computePeriodRange(
+  period: BudgetPeriod,
+  fromStr: string,
+  toStr: string
+): { from: Date; to: Date; label: string } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const day = now.getDate();
+
+  if (period === "week") {
+    const weekday = (now.getDay() + 6) % 7;
+    const monday = new Date(year, month, day - weekday, 0, 0, 0, 0);
+    const sunday = new Date(year, month, day - weekday + 6, 23, 59, 59, 999);
+    const fmt = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+    return { from: monday, to: sunday, label: `${fmt(monday)} – ${fmt(sunday)}` };
+  }
+  if (period === "fortnight") {
+    const isFirst = day <= 15;
+    const from = isFirst ? new Date(year, month, 1, 0, 0, 0, 0) : new Date(year, month, 16, 0, 0, 0, 0);
+    const to = isFirst ? new Date(year, month, 15, 23, 59, 59, 999) : new Date(year, month + 1, 0, 23, 59, 59, 999);
+    const mName = now.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+    return { from, to, label: isFirst ? `1ª quincena de ${mName}` : `2ª quincena de ${mName}` };
+  }
+  if (period === "month") {
+    const from = new Date(year, month, 1, 0, 0, 0, 0);
+    const to = new Date(year, month + 1, 0, 23, 59, 59, 999);
+    return { from, to, label: now.toLocaleDateString("es-MX", { month: "long", year: "numeric" }) };
+  }
+  // custom
+  const from = parseDateInput(fromStr, false) ?? new Date(year, month, 1, 0, 0, 0, 0);
+  const to = parseDateInput(toStr, true) ?? new Date(year, month + 1, 0, 23, 59, 59, 999);
+  const fmt = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+  return { from, to, label: `${fmt(from)} – ${fmt(to)}` };
+}
+
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView | null>(null);
@@ -194,6 +246,18 @@ export default function ReportsScreen() {
   const [spendFrom, setSpendFrom] = useState("");
   const [spendTo, setSpendTo] = useState("");
   const [spendSeasonId, setSpendSeasonId] = useState("");
+  const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>("month");
+  const [budgetFrom, setBudgetFrom] = useState("");
+  const [budgetTo, setBudgetTo] = useState("");
+  const [byuserPeriod, setByuserPeriod] = useState<BudgetPeriod>("month");
+  const [byuserFrom, setByuserFrom] = useState("");
+  const [byuserTo, setByuserTo] = useState("");
+  const [byuserFilter, setByuserFilter] = useState(""); // "" = todos
+  const [additionsPeriod, setAdditionsPeriod] = useState<BudgetPeriod>("month");
+  const [additionsFrom, setAdditionsFrom] = useState("");
+  const [additionsTo, setAdditionsTo] = useState("");
+  const [additionsFilter, setAdditionsFilter] = useState(""); // "" = todos
+  const [householdUsers, setHouseholdUsers] = useState<UserInfo[]>([]);
   const [activeReport, setActiveReport] = useState<ReportKey>("pending");
   const [openDateField, setOpenDateField] = useState<DateFieldKey | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -209,7 +273,10 @@ export default function ReportsScreen() {
     { key: "supplied", label: "Surtidos" },
     { key: "trend", label: "Tendencia" },
     { key: "best", label: "Mejor precio" },
-    { key: "spend", label: "Gasto" }
+    { key: "spend", label: "Gasto" },
+    { key: "budget", label: "Mi gasto" },
+    { key: "byuser", label: "Por usuario" },
+    { key: "additions", label: "Adiciones" }
   ];
 
   useEffect(() => {
@@ -257,6 +324,18 @@ export default function ReportsScreen() {
         return spendFrom;
       case "spendTo":
         return spendTo;
+      case "budgetFrom":
+        return budgetFrom;
+      case "budgetTo":
+        return budgetTo;
+      case "byuserFrom":
+        return byuserFrom;
+      case "byuserTo":
+        return byuserTo;
+      case "additionsFrom":
+        return additionsFrom;
+      case "additionsTo":
+        return additionsTo;
       default:
         return "";
     }
@@ -282,6 +361,24 @@ export default function ReportsScreen() {
       case "spendTo":
         setSpendTo(value);
         return;
+      case "budgetFrom":
+        setBudgetFrom(value);
+        return;
+      case "budgetTo":
+        setBudgetTo(value);
+        return;
+      case "byuserFrom":
+        setByuserFrom(value);
+        return;
+      case "byuserTo":
+        setByuserTo(value);
+        return;
+      case "additionsFrom":
+        setAdditionsFrom(value);
+        return;
+      case "additionsTo":
+        setAdditionsTo(value);
+        return;
       default:
         return;
     }
@@ -298,7 +395,7 @@ export default function ReportsScreen() {
       return undefined;
     }
     return parseDateInput(getDateFieldValue(openDateField), false);
-  }, [openDateField, pendingFrom, pendingTo, suppliedFrom, suppliedTo, spendFrom, spendTo]);
+  }, [openDateField, pendingFrom, pendingTo, suppliedFrom, suppliedTo, spendFrom, spendTo, budgetFrom, budgetTo, byuserFrom, byuserTo, additionsFrom, additionsTo]);
 
   const calendarTitle = useMemo(() => {
     return calendarMonth.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
@@ -363,6 +460,7 @@ export default function ReportsScreen() {
                 typeof data.estimatedPrice === "number" ? data.estimatedPrice : undefined,
               estimatedUnitPrice:
                 typeof data.estimatedUnitPrice === "number" ? data.estimatedUnitPrice : undefined,
+              addedByUid: String(data.addedByUid ?? ""),
               createdAt: data.createdAt as Timestamp | undefined
             };
           })
@@ -392,6 +490,7 @@ export default function ReportsScreen() {
               storeId: String(data.storeId ?? ""),
               storeName: String(data.storeName ?? ""),
               seasonId: typeof data.seasonId === "string" ? data.seasonId : undefined,
+              purchasedByUid: String(data.purchasedByUid ?? ""),
               purchasedAt: data.purchasedAt as Timestamp | undefined
             };
           })
@@ -420,11 +519,25 @@ export default function ReportsScreen() {
       );
     });
 
+    const usersRef = collection(db, "users");
+    const unsubUsers = onSnapshot(
+      query(usersRef, where("householdId", "==", householdId)),
+      (snap) => {
+        setHouseholdUsers(
+          snap.docs.map((d) => ({
+            uid: d.id,
+            displayName: String(d.data().displayName ?? d.data().email ?? d.id)
+          }))
+        );
+      }
+    );
+
     return () => {
       unsubPending();
       unsubPurchases();
       unsubStores();
       unsubSeasons();
+      unsubUsers();
     };
   }, [householdId]);
 
@@ -678,6 +791,162 @@ export default function ReportsScreen() {
     const purchasesCount = spendByStoreRows.reduce((acc, row) => acc + row.purchasesCount, 0);
     return { totalSpent, purchasesCount };
   }, [spendByStoreRows]);
+
+  const budgetRange = useMemo(
+    () => computePeriodRange(budgetPeriod, budgetFrom, budgetTo),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [budgetPeriod, budgetFrom, budgetTo]
+  );
+
+  const budgetPurchases = useMemo(() => {
+    return purchases.filter((item) =>
+      isInRange(item.purchasedAt, budgetRange.from, budgetRange.to)
+    );
+  }, [purchases, budgetRange]);
+
+  const budgetSummary = useMemo(() => {
+    const totalSpent = budgetPurchases.reduce((acc, item) => acc + item.pricePaid, 0);
+    const totalQuantity = budgetPurchases.reduce((acc, item) => acc + item.quantity, 0);
+    return { totalSpent, totalQuantity, count: budgetPurchases.length };
+  }, [budgetPurchases]);
+
+  const budgetByStore = useMemo(() => {
+    const grouped = new Map<string, StoreSpend>();
+    for (const item of budgetPurchases) {
+      const current = grouped.get(item.storeId) ?? {
+        storeId: item.storeId,
+        storeName: item.storeName || "Sin tienda",
+        totalSpent: 0,
+        purchasesCount: 0,
+        totalQuantity: 0
+      };
+      current.totalSpent += item.pricePaid;
+      current.purchasesCount += 1;
+      current.totalQuantity += item.quantity;
+      grouped.set(item.storeId, current);
+    }
+    return Array.from(grouped.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+  }, [budgetPurchases]);
+
+  const budgetByDay = useMemo(() => {
+    const grouped = new Map<string, number>();
+    for (const item of budgetPurchases) {
+      if (!item.purchasedAt) continue;
+      const d = item.purchasedAt.toDate();
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      grouped.set(key, (grouped.get(key) ?? 0) + item.pricePaid);
+    }
+    return Array.from(grouped.entries())
+      .map(([day, total]) => ({ day, total }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+  }, [budgetPurchases]);
+
+  const budgetMaxStore = useMemo(
+    () => (budgetByStore.length > 0 ? budgetByStore[0].totalSpent : 0),
+    [budgetByStore]
+  );
+
+  const budgetMaxDay = useMemo(
+    () => (budgetByDay.length > 0 ? Math.max(...budgetByDay.map((d) => d.total)) : 0),
+    [budgetByDay]
+  );
+
+  // ── Por usuario (compras) ──────────────────────────────────────────
+  const byuserRange = useMemo(
+    () => computePeriodRange(byuserPeriod, byuserFrom, byuserTo),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [byuserPeriod, byuserFrom, byuserTo]
+  );
+
+  const byuserPurchases = useMemo(
+    () => purchases.filter((p) => isInRange(p.purchasedAt, byuserRange.from, byuserRange.to)),
+    [purchases, byuserRange]
+  );
+
+  type UserPurchaseSummary = {
+    uid: string;
+    displayName: string;
+    totalSpent: number;
+    count: number;
+    totalQuantity: number;
+    items: PurchaseItem[];
+  };
+
+  const byuserRows = useMemo((): UserPurchaseSummary[] => {
+    const grouped = new Map<string, UserPurchaseSummary>();
+    for (const p of byuserPurchases) {
+      const uid = p.purchasedByUid || "desconocido";
+      const userInfo = householdUsers.find((u) => u.uid === uid);
+      const displayName = userInfo?.displayName ?? uid;
+      const current = grouped.get(uid) ?? { uid, displayName, totalSpent: 0, count: 0, totalQuantity: 0, items: [] };
+      current.totalSpent += p.pricePaid;
+      current.count += 1;
+      current.totalQuantity += p.quantity;
+      current.items.push(p);
+      grouped.set(uid, current);
+    }
+    return Array.from(grouped.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+  }, [byuserPurchases, householdUsers]);
+
+  const byuserFiltered = useMemo(
+    () => (byuserFilter ? byuserRows.filter((r) => r.uid === byuserFilter) : byuserRows),
+    [byuserRows, byuserFilter]
+  );
+
+  const byuserTotal = useMemo(
+    () => byuserFiltered.reduce((acc, r) => acc + r.totalSpent, 0),
+    [byuserFiltered]
+  );
+
+  const byuserMaxSpent = useMemo(
+    () => (byuserRows.length > 0 ? byuserRows[0].totalSpent : 0),
+    [byuserRows]
+  );
+
+  // ── Adiciones por usuario ──────────────────────────────────────────
+  const additionsRange = useMemo(
+    () => computePeriodRange(additionsPeriod, additionsFrom, additionsTo),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [additionsPeriod, additionsFrom, additionsTo]
+  );
+
+  const additionsFiltered = useMemo(
+    () => pendingItems.filter((item) => isInRange(item.createdAt, additionsRange.from, additionsRange.to)),
+    [pendingItems, additionsRange]
+  );
+
+  type UserAdditionSummary = {
+    uid: string;
+    displayName: string;
+    count: number;
+    totalQuantity: number;
+    items: PendingItem[];
+  };
+
+  const additionsByUser = useMemo((): UserAdditionSummary[] => {
+    const grouped = new Map<string, UserAdditionSummary>();
+    for (const item of additionsFiltered) {
+      const uid = item.addedByUid || "desconocido";
+      const userInfo = householdUsers.find((u) => u.uid === uid);
+      const displayName = userInfo?.displayName ?? uid;
+      const current = grouped.get(uid) ?? { uid, displayName, count: 0, totalQuantity: 0, items: [] };
+      current.count += 1;
+      current.totalQuantity += item.quantity;
+      current.items.push(item);
+      grouped.set(uid, current);
+    }
+    return Array.from(grouped.values()).sort((a, b) => b.count - a.count);
+  }, [additionsFiltered, householdUsers]);
+
+  const additionsUserFiltered = useMemo(
+    () => (additionsFilter ? additionsByUser.filter((r) => r.uid === additionsFilter) : additionsByUser),
+    [additionsByUser, additionsFilter]
+  );
+
+  const additionsMaxCount = useMemo(
+    () => (additionsByUser.length > 0 ? additionsByUser[0].count : 0),
+    [additionsByUser]
+  );
 
   if (loadingProfile) {
     return (
@@ -1092,6 +1361,131 @@ export default function ReportsScreen() {
           </View>
         ) : null}
 
+        {activeReport === "budget" ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>6) Mi gasto por periodo</Text>
+
+            {/* Selector rápido de periodo */}
+            <Text style={styles.filterLabel}>Periodo</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+              {(
+                [
+                  { key: "week", label: "Semana actual" },
+                  { key: "fortnight", label: "Quincena actual" },
+                  { key: "month", label: "Mes actual" },
+                  { key: "custom", label: "Personalizado" }
+                ] as Array<{ key: BudgetPeriod; label: string }>
+              ).map((option) => (
+                <Pressable
+                  key={option.key}
+                  onPress={() => setBudgetPeriod(option.key)}
+                  style={[styles.chip, budgetPeriod === option.key && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, budgetPeriod === option.key && styles.chipTextActive]}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {/* Pickers de fecha solo si es personalizado */}
+            {budgetPeriod === "custom" ? (
+              <View style={styles.row}>
+                <Pressable
+                  onPress={() => openCalendarForField("budgetFrom")}
+                  style={[styles.input, styles.field, styles.dateButton]}
+                >
+                  <Text style={budgetFrom ? styles.dateButtonText : styles.dateButtonPlaceholder}>
+                    {budgetFrom || "Desde"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => openCalendarForField("budgetTo")}
+                  style={[styles.input, styles.field, styles.dateButton]}
+                >
+                  <Text style={budgetTo ? styles.dateButtonText : styles.dateButtonPlaceholder}>
+                    {budgetTo || "Hasta"}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {/* Etiqueta del periodo activo */}
+            <Text style={styles.budgetPeriodLabel}>{budgetRange.label}</Text>
+
+            {/* Tarjeta de total */}
+            <View style={styles.budgetTotalCard}>
+              <Text style={styles.budgetTotalLabel}>Total gastado</Text>
+              <Text style={styles.budgetTotalAmount}>{formatMoney(budgetSummary.totalSpent)}</Text>
+              <View style={styles.budgetTotalRow}>
+                <Text style={styles.budgetTotalMeta}>{budgetSummary.count} compras</Text>
+                <Text style={styles.budgetTotalMeta}>·</Text>
+                <Text style={styles.budgetTotalMeta}>{budgetSummary.totalQuantity} artículos</Text>
+              </View>
+            </View>
+
+            {budgetPurchases.length === 0 ? (
+              <Text style={styles.helper}>Sin compras para este periodo.</Text>
+            ) : (
+              <>
+                {/* Gráfica por tienda */}
+                {budgetByStore.length > 0 ? (
+                  <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>Gasto por tienda</Text>
+                    {budgetByStore.map((row) => {
+                      const pct = budgetMaxStore > 0 ? (row.totalSpent / budgetMaxStore) * 100 : 0;
+                      return (
+                        <View key={`bs-${row.storeId}`} style={styles.chartRow}>
+                          <Text style={styles.chartLabel} numberOfLines={1}>{row.storeName}</Text>
+                          <View style={styles.chartTrack}>
+                            <View style={[styles.chartBar, { width: `${Math.max(3, pct)}%` }]} />
+                          </View>
+                          <Text style={styles.chartValue}>{formatMoney(row.totalSpent)}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                {/* Gráfica por día */}
+                {budgetByDay.length > 1 ? (
+                  <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>Gasto por día</Text>
+                    {budgetByDay.map((row) => {
+                      const pct = budgetMaxDay > 0 ? (row.total / budgetMaxDay) * 100 : 0;
+                      const dayLabel = new Date(row.day + "T12:00:00").toLocaleDateString("es-MX", {
+                        day: "numeric",
+                        month: "short"
+                      });
+                      return (
+                        <View key={`bd-${row.day}`} style={styles.chartRow}>
+                          <Text style={styles.chartLabel}>{dayLabel}</Text>
+                          <View style={styles.chartTrack}>
+                            <View style={[styles.chartBarDay, { width: `${Math.max(3, pct)}%` }]} />
+                          </View>
+                          <Text style={styles.chartValue}>{formatMoney(row.total)}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                {/* Detalle por tienda */}
+                {budgetByStore.map((row, index) => {
+                  const share = budgetSummary.totalSpent > 0 ? (row.totalSpent / budgetSummary.totalSpent) * 100 : 0;
+                  return (
+                    <View key={`bsd-${row.storeId}`} style={styles.itemCard}>
+                      <Text style={styles.itemTitle}>{index + 1}. {row.storeName}</Text>
+                      <Text style={styles.itemMeta}>Gasto: {formatMoney(row.totalSpent)} ({share.toFixed(1)}%)</Text>
+                      <Text style={styles.itemMeta}>Compras: {row.purchasesCount} · Artículos: {row.totalQuantity}</Text>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </View>
+        ) : null}
+
         {activeReport === "spend" ? (
           <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>5) Gasto por tienda y periodo</Text>
@@ -1168,6 +1562,212 @@ export default function ReportsScreen() {
           )}
           </View>
         ) : null}
+
+        {/* ── Por usuario (compras) ───────────────────────────────── */}
+        {activeReport === "byuser" ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>7) Compras por usuario</Text>
+
+            <Text style={styles.filterLabel}>Periodo</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+              {([ { key: "week", label: "Semana actual" }, { key: "fortnight", label: "Quincena actual" },
+                  { key: "month", label: "Mes actual" }, { key: "custom", label: "Personalizado" }
+              ] as Array<{ key: BudgetPeriod; label: string }>).map((opt) => (
+                <Pressable key={opt.key} onPress={() => setByuserPeriod(opt.key)}
+                  style={[styles.chip, byuserPeriod === opt.key && styles.chipActive]}>
+                  <Text style={[styles.chipText, byuserPeriod === opt.key && styles.chipTextActive]}>{opt.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {byuserPeriod === "custom" ? (
+              <View style={styles.row}>
+                <Pressable onPress={() => openCalendarForField("byuserFrom")}
+                  style={[styles.input, styles.field, styles.dateButton]}>
+                  <Text style={byuserFrom ? styles.dateButtonText : styles.dateButtonPlaceholder}>
+                    {byuserFrom || "Desde"}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => openCalendarForField("byuserTo")}
+                  style={[styles.input, styles.field, styles.dateButton]}>
+                  <Text style={byuserTo ? styles.dateButtonText : styles.dateButtonPlaceholder}>
+                    {byuserTo || "Hasta"}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            <Text style={styles.budgetPeriodLabel}>{byuserRange.label}</Text>
+
+            <Text style={styles.filterLabel}>Usuario</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+              <Pressable onPress={() => setByuserFilter("")}
+                style={[styles.chip, byuserFilter === "" && styles.chipActive]}>
+                <Text style={[styles.chipText, byuserFilter === "" && styles.chipTextActive]}>Todos</Text>
+              </Pressable>
+              {householdUsers.map((u) => (
+                <Pressable key={u.uid} onPress={() => setByuserFilter(u.uid)}
+                  style={[styles.chip, byuserFilter === u.uid && styles.chipActive]}>
+                  <Text style={[styles.chipText, byuserFilter === u.uid && styles.chipTextActive]}>{u.displayName}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {byuserPurchases.length === 0 ? (
+              <Text style={styles.helper}>Sin compras en este periodo.</Text>
+            ) : (
+              <>
+                {/* Resumen total del periodo */}
+                <View style={styles.budgetTotalCard}>
+                  <Text style={styles.budgetTotalLabel}>Total del periodo</Text>
+                  <Text style={styles.budgetTotalAmount}>{formatMoney(byuserTotal)}</Text>
+                  <View style={styles.budgetTotalRow}>
+                    <Text style={styles.budgetTotalMeta}>{byuserPurchases.length} compras</Text>
+                    <Text style={styles.budgetTotalMeta}>·</Text>
+                    <Text style={styles.budgetTotalMeta}>{byuserFiltered.length === byuserRows.length ? byuserRows.length : 1} usuario(s)</Text>
+                  </View>
+                </View>
+
+                {/* Barra comparativa por usuario */}
+                {byuserRows.length > 1 && byuserFilter === "" ? (
+                  <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>Gasto por usuario</Text>
+                    {byuserRows.map((row) => {
+                      const pct = byuserMaxSpent > 0 ? (row.totalSpent / byuserMaxSpent) * 100 : 0;
+                      return (
+                        <View key={`bur-${row.uid}`} style={styles.chartRow}>
+                          <Text style={styles.chartLabel} numberOfLines={1}>{row.displayName}</Text>
+                          <View style={styles.chartTrack}>
+                            <View style={[styles.chartBarUser, { width: `${Math.max(3, pct)}%` }]} />
+                          </View>
+                          <Text style={styles.chartValue}>{formatMoney(row.totalSpent)}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                {/* Detalle por usuario filtrado */}
+                {byuserFiltered.map((row) => (
+                  <View key={`bud-${row.uid}`} style={styles.userSection}>
+                    <View style={styles.userSectionHeader}>
+                      <Text style={styles.userSectionName}>{row.displayName}</Text>
+                      <Text style={styles.userSectionTotal}>{formatMoney(row.totalSpent)}</Text>
+                    </View>
+                    <Text style={styles.userSectionMeta}>{row.count} compras · {row.totalQuantity} artículos</Text>
+                    {row.items.map((p) => (
+                      <View key={`bui-${p.id}`} style={styles.itemCard}>
+                        <Text style={styles.itemTitle}>{p.name}</Text>
+                        <Text style={styles.itemMeta}>Tienda: {p.storeName}</Text>
+                        <Text style={styles.itemMeta}>Cantidad: {p.quantity} · Total: {formatMoney(p.pricePaid)}</Text>
+                        <Text style={styles.itemMeta}>{formatDate(p.purchasedAt)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
+        ) : null}
+
+        {/* ── Adiciones por usuario ──────────────────────────────── */}
+        {activeReport === "additions" ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>8) Adiciones a la lista por usuario</Text>
+
+            <Text style={styles.filterLabel}>Periodo</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+              {([ { key: "week", label: "Semana actual" }, { key: "fortnight", label: "Quincena actual" },
+                  { key: "month", label: "Mes actual" }, { key: "custom", label: "Personalizado" }
+              ] as Array<{ key: BudgetPeriod; label: string }>).map((opt) => (
+                <Pressable key={opt.key} onPress={() => setAdditionsPeriod(opt.key)}
+                  style={[styles.chip, additionsPeriod === opt.key && styles.chipActive]}>
+                  <Text style={[styles.chipText, additionsPeriod === opt.key && styles.chipTextActive]}>{opt.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {additionsPeriod === "custom" ? (
+              <View style={styles.row}>
+                <Pressable onPress={() => openCalendarForField("additionsFrom")}
+                  style={[styles.input, styles.field, styles.dateButton]}>
+                  <Text style={additionsFrom ? styles.dateButtonText : styles.dateButtonPlaceholder}>
+                    {additionsFrom || "Desde"}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => openCalendarForField("additionsTo")}
+                  style={[styles.input, styles.field, styles.dateButton]}>
+                  <Text style={additionsTo ? styles.dateButtonText : styles.dateButtonPlaceholder}>
+                    {additionsTo || "Hasta"}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            <Text style={styles.budgetPeriodLabel}>{additionsRange.label}</Text>
+
+            <Text style={styles.filterLabel}>Usuario</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+              <Pressable onPress={() => setAdditionsFilter("")}
+                style={[styles.chip, additionsFilter === "" && styles.chipActive]}>
+                <Text style={[styles.chipText, additionsFilter === "" && styles.chipTextActive]}>Todos</Text>
+              </Pressable>
+              {householdUsers.map((u) => (
+                <Pressable key={u.uid} onPress={() => setAdditionsFilter(u.uid)}
+                  style={[styles.chip, additionsFilter === u.uid && styles.chipActive]}>
+                  <Text style={[styles.chipText, additionsFilter === u.uid && styles.chipTextActive]}>{u.displayName}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {additionsFiltered.length === 0 ? (
+              <Text style={styles.helper}>Sin adiciones en este periodo.</Text>
+            ) : (
+              <>
+                {/* Barra comparativa */}
+                {additionsByUser.length > 1 && additionsFilter === "" ? (
+                  <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>Artículos agregados por usuario</Text>
+                    {additionsByUser.map((row) => {
+                      const pct = additionsMaxCount > 0 ? (row.count / additionsMaxCount) * 100 : 0;
+                      return (
+                        <View key={`adr-${row.uid}`} style={styles.chartRow}>
+                          <Text style={styles.chartLabel} numberOfLines={1}>{row.displayName}</Text>
+                          <View style={styles.chartTrack}>
+                            <View style={[styles.chartBarAdditions, { width: `${Math.max(3, pct)}%` }]} />
+                          </View>
+                          <Text style={styles.chartValue}>{row.count} arts.</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                {/* Detalle por usuario */}
+                {additionsUserFiltered.map((row) => (
+                  <View key={`add-${row.uid}`} style={styles.userSection}>
+                    <View style={styles.userSectionHeader}>
+                      <Text style={styles.userSectionName}>{row.displayName}</Text>
+                      <Text style={styles.userSectionTotal}>{row.count} artículo{row.count !== 1 ? "s" : ""}</Text>
+                    </View>
+                    <Text style={styles.userSectionMeta}>Cantidad total: {row.totalQuantity}</Text>
+                    {row.items.map((item) => (
+                      <View key={`addi-${item.id}`} style={styles.itemCard}>
+                        <Text style={styles.itemTitle}>{item.name}</Text>
+                        <Text style={styles.itemMeta}>
+                          Cantidad: {item.quantity}
+                          {item.estimatedPrice !== undefined ? ` · Estimado: ${formatMoney(item.estimatedPrice)}` : ""}
+                        </Text>
+                        <Text style={styles.itemMeta}>Agregado: {formatDate(item.createdAt)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
+        ) : null}
+
       </ScrollView>
       <Modal visible={!!openDateField} transparent animationType="fade" onRequestClose={() => setOpenDateField(null)}>
         <Pressable style={styles.calendarOverlay} onPress={() => setOpenDateField(null)}>
@@ -1569,5 +2169,86 @@ const styles = StyleSheet.create({
   error: {
     color: "#b91c1c",
     fontWeight: "600"
+  },
+  budgetPeriodLabel: {
+    color: "#0f766e",
+    fontWeight: "700",
+    fontSize: 13,
+    textAlign: "center",
+    backgroundColor: "#f0fdfa",
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10
+  },
+  budgetTotalCard: {
+    borderWidth: 1,
+    borderColor: "#99f6e4",
+    borderRadius: 14,
+    backgroundColor: "#f0fdfa",
+    padding: 16,
+    alignItems: "center",
+    gap: 4
+  },
+  budgetTotalLabel: {
+    color: "#0f766e",
+    fontWeight: "700",
+    fontSize: 13,
+    textTransform: "uppercase",
+    letterSpacing: 0.5
+  },
+  budgetTotalAmount: {
+    color: "#0f172a",
+    fontWeight: "900",
+    fontSize: 36
+  },
+  budgetTotalRow: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center"
+  },
+  budgetTotalMeta: {
+    color: "#64748b",
+    fontSize: 13,
+    fontWeight: "600"
+  },
+  chartBarDay: {
+    height: "100%",
+    backgroundColor: "#6366f1"
+  },
+  chartBarUser: {
+    height: "100%",
+    backgroundColor: "#f59e0b"
+  },
+  chartBarAdditions: {
+    height: "100%",
+    backgroundColor: "#f43f5e"
+  },
+  userSection: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    padding: 12,
+    gap: 6
+  },
+  userSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
+  userSectionName: {
+    color: "#0f172a",
+    fontWeight: "800",
+    fontSize: 15,
+    flex: 1
+  },
+  userSectionTotal: {
+    color: "#0f766e",
+    fontWeight: "800",
+    fontSize: 15
+  },
+  userSectionMeta: {
+    color: "#64748b",
+    fontSize: 13
   }
 });
