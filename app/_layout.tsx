@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
-import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { auth, db, firebaseBootError } from "../src/config/firebase";
 
 export default function RootLayout() {
@@ -76,7 +77,7 @@ export default function RootLayout() {
       return;
     }
 
-    if (inAuth || inPending) {
+    if (inPending) {
       router.replace("/");
     }
   }, [booting, hasSession, isApproved, router, segments]);

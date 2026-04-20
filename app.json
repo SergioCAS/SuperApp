@@ -2,7 +2,8 @@
   "expo": {
     "name": "Lista del Super",
     "slug": "lista-del-super",
-    "version": "0.1.0",
+    "scheme": "listadelsuper",
+    "version": "0.1.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",

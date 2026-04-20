@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SúperApp — Reglas de Negocio</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal-900: #134e4a;
+      --teal-700: #0f766e;
+      --teal-500: #14b8a6;
+      --teal-200: #99f6e4;
+      --teal-50:  #f0fdfa;
+      --navy:     #0f172a;
+      --slate-700:#334155;
+      --slate-500:#64748b;
+      --slate-300:#cbd5e1;
+      --slate-100:#f1f5f9;
+      --slate-50: #f8fafc;
+      --white:    #ffffff;
+      --amber:    #f59e0b;
+      --rose:     #f43f5e;
+      --indigo:   #6366f1;
+      --green:    #10b981;
+      --sidebar-w: 280px;
+      --header-h:  60px;
+      --radius:    10px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+      --transition: .2s ease;
+    }
+
+    [data-theme="dark"] {
+      --navy:      #e2e8f0;
+      --slate-700: #94a3b8;
+      --slate-500: #64748b;
+      --slate-300: #334155;
+      --slate-100: #1e293b;
+      --slate-50:  #0f172a;
+      --white:     #1e293b;
+      --teal-50:   #0d2b2a;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.4);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--slate-50);
+      color: var(--navy);
+      line-height: 1.65;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    /* ===== LAYOUT ===== */
+    #app { display: flex; min-height: 100vh; }
+
+    /* ===== SIDEBAR ===== */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--white);
+      border-right: 1px solid var(--slate-300);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      transition: transform var(--transition), background var(--transition), border-color var(--transition);
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid var(--slate-300);
+      position: sticky;
+      top: 0;
+      background: var(--white);
+      z-index: 10;
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .sidebar-logo-icon {
+      width: 36px; height: 36px;
+      background: var(--teal-700);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo-text { font-size: 15px; font-weight: 800; color: var(--navy); line-height: 1.2; }
+    .sidebar-logo-sub  { font-size: 11px; color: var(--slate-500); font-weight: 500; }
+
+    #search-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1.5px solid var(--slate-300);
+      border-radius: 8px;
+      background: var(--slate-50);
+      color: var(--navy);
+      font-size: 13px;
+      outline: none;
+      transition: border-color var(--transition), background var(--transition), color var(--transition);
+    }
+    #search-input:focus { border-color: var(--teal-500); }
+    #search-input::placeholder { color: var(--slate-500); }
+
+    .sidebar-nav { padding: 10px 10px 20px; flex: 1; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--slate-700);
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: background var(--transition), color var(--transition);
+      margin-bottom: 2px;
+    }
+    .nav-item:hover  { background: var(--teal-50); color: var(--teal-700); }
+    .nav-item.active { background: var(--teal-50); color: var(--teal-700); font-weight: 700; }
+
+    .nav-icon {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--slate-100);
+      color: var(--slate-500);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 999px;
+    }
+
+    /* ===== MAIN ===== */
+    #main {
+      flex: 1;
+      margin-left: var(--sidebar-w);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ===== TOPBAR ===== */
+    #topbar {
+      height: var(--header-h);
+      background: var(--white);
+      border-bottom: 1px solid var(--slate-300);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .topbar-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    .topbar-breadcrumb span { color: var(--slate-500); }
+    .topbar-breadcrumb strong { color: var(--navy); font-weight: 700; }
+    .topbar-breadcrumb .sep { color: var(--slate-300); }
+
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+    #theme-toggle {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      border: 1.5px solid var(--slate-300);
+      background: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--slate-700);
+      transition: all var(--transition);
+    }
+    #theme-toggle:hover { background: var(--slate-100); }
+
+    #menu-toggle {
+      display: none;
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      border: 1.5px solid var(--slate-300);
+      background: none;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--slate-700);
+    }
+
+    /* ===== CONTENT ===== */
+    #content {
+      padding: 36px 40px 60px;
+      max-width: 860px;
+    }
+
+    /* ===== SECTIONS ===== */
+    .section { display: none; animation: fadeIn .25s ease; }
+    .section.visible { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    /* ===== SECTION HEADER ===== */
+    .section-hero {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .section-hero-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+
+    .section-hero h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+    .section-hero p {
+      font-size: 14px;
+      color: var(--slate-500);
+      margin-top: 3px;
+    }
+
+    /* ===== TYPOGRAPHY ===== */
+    h2 {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--navy);
+      margin: 28px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--slate-100);
+    }
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 20px 0 8px;
+    }
+    p { color: var(--slate-700); margin-bottom: 10px; font-size: 14.5px; }
+    li { color: var(--slate-700); font-size: 14.5px; margin-bottom: 4px; }
+    ul, ol { padding-left: 20px; margin-bottom: 10px; }
+
+    strong { color: var(--navy); }
+
+    /* ===== TABLES ===== */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--slate-300);
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    thead { background: var(--slate-100); }
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--navy);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap;
+    }
+    thead th:first-child { border-radius: var(--radius) 0 0 0; }
+    thead th:last-child  { border-radius: 0 var(--radius) 0 0; }
+
+    tbody tr { border-top: 1px solid var(--slate-100); }
+    tbody tr:hover { background: var(--teal-50); }
+    tbody td { padding: 9px 14px; color: var(--slate-700); vertical-align: top; }
+    tbody td:first-child { color: var(--navy); font-weight: 600; }
+
+    .check { color: var(--green); font-size: 16px; }
+    .cross { color: var(--slate-300); font-size: 16px; }
+    .center { text-align: center; }
+
+    /* ===== CODE BLOCKS ===== */
+    pre {
+      background: var(--slate-100);
+      border: 1px solid var(--slate-300);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      font-size: 12.5px;
+      line-height: 1.7;
+      transition: background var(--transition), border-color var(--transition);
+    }
+    code { font-family: "SF Mono", "Fira Code", "Consolas", monospace; color: var(--teal-700); }
+    [data-theme="dark"] code { color: var(--teal-200); }
+    [data-theme="dark"] pre  { background: #0d1f2d; border-color: #1e3a4a; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--slate-300);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--slate-500);
+      margin-bottom: 8px;
+    }
+
+    /* ===== CALLOUTS ===== */
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      border-left: 4px solid;
+      font-size: 14px;
+    }
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout-body  { color: var(--slate-700); }
+    .callout-body strong { color: var(--navy); display: block; margin-bottom: 2px; }
+
+    .callout.info    { background: var(--teal-50);  border-color: var(--teal-500); }
+    .callout.warn    { background: #fffbeb;          border-color: var(--amber); }
+    .callout.danger  { background: #fff1f2;          border-color: var(--rose); }
+    .callout.neutral { background: var(--slate-100); border-color: var(--slate-300); }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+    .badge-teal   { background: var(--teal-50);  color: var(--teal-700);  border: 1px solid var(--teal-200); }
+    .badge-amber  { background: #fffbeb;          color: #92400e;          border: 1px solid #fde68a; }
+    .badge-rose   { background: #fff1f2;          color: #9f1239;          border: 1px solid #fecdd3; }
+    .badge-slate  { background: var(--slate-100); color: var(--slate-500); border: 1px solid var(--slate-300); }
+
+    /* ===== FLOW STEPS ===== */
+    .flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 18px;
+    }
+    .flow-step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .flow-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .flow-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--teal-700);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .flow-connector {
+      width: 2px;
+      flex: 1;
+      min-height: 18px;
+      background: var(--slate-300);
+      margin: 2px 0;
+    }
+    .flow-step:last-child .flow-connector { display: none; }
+    .flow-content {
+      padding-bottom: 18px;
+      padding-top: 4px;
+      flex: 1;
+    }
+    .flow-content strong { color: var(--navy); font-size: 14px; }
+    .flow-content p { margin: 2px 0 0; font-size: 13.5px; color: var(--slate-500); }
+
+    /* ===== SCHEMA BLOCK ===== */
+    .schema-field {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--slate-100);
+      font-size: 13.5px;
+    }
+    .schema-field:last-child { border-bottom: none; }
+    .schema-name { font-family: "SF Mono", "Fira Code", monospace; color: var(--teal-700); font-weight: 700; flex-shrink: 0; min-width: 160px; }
+    [data-theme="dark"] .schema-name { color: var(--teal-200); }
+    .schema-type { color: var(--indigo); font-size: 12px; font-weight: 600; flex-shrink: 0; min-width: 72px; }
+    [data-theme="dark"] .schema-type { color: #a5b4fc; }
+    .schema-opt  { color: var(--slate-300); font-size: 12px; flex-shrink: 0; }
+    .schema-desc { color: var(--slate-700); flex: 1; }
+
+    /* ===== SEARCH RESULTS ===== */
+    #search-results {
+      padding: 10px;
+    }
+    .search-result-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: background var(--transition);
+    }
+    .search-result-item:hover { background: var(--teal-50); }
+    .search-result-item .sr-title { font-weight: 700; color: var(--navy); font-size: 13.5px; }
+    .search-result-item .sr-desc  { font-size: 12px; color: var(--slate-500); margin-top: 1px; }
+    mark { background: #fef08a; color: inherit; border-radius: 3px; padding: 0 2px; }
+
+    /* ===== OVERVIEW GRID ===== */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .overview-card {
+      background: var(--white);
+      border: 1px solid var(--slate-300);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+    .overview-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--teal-500);
+    }
+    .overview-card-icon { font-size: 26px; margin-bottom: 8px; }
+    .overview-card-title { font-weight: 800; color: var(--navy); font-size: 14px; margin-bottom: 4px; }
+    .overview-card-desc  { font-size: 12.5px; color: var(--slate-500); line-height: 1.5; }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      height: 1px;
+      background: var(--slate-100);
+      margin: 24px 0;
+    }
+
+    /* ===== SIDEBAR OVERLAY ===== */
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 90;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      :root { --sidebar-w: 260px; }
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: none; box-shadow: var(--shadow-md); }
+      #main { margin-left: 0; }
+      #content { padding: 24px 20px 48px; }
+      #menu-toggle { display: flex; }
+      #overlay.open { display: block; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== SIDEBAR ===== -->
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🛒</div>
+        <div>
+          <div class="sidebar-logo-text">SúperApp</div>
+          <div class="sidebar-logo-sub">Reglas de Negocio</div>
+        </div>
+      </div>
+      <input id="search-input" type="search" placeholder="Buscar regla..." autocomplete="off" />
+    </div>
+    <div class="sidebar-nav" id="nav-links">
+      <a class="nav-item active" data-section="overview" href="#">
+        <span class="nav-icon" style="background:#f0fdfa">🗺️</span>
+        Visión general
+      </a>
+      <a class="nav-item" data-section="auth" href="#">
+        <span class="nav-icon" style="background:#fff1f2">🔐</span>
+        Autenticación
+        <span class="nav-badge">01</span>
+      </a>
+      <a class="nav-item" data-section="roles" href="#">
+        <span class="nav-icon" style="background:#faf5ff">👥</span>
+        Roles y Permisos
+        <span class="nav-badge">02</span>
+      </a>
+      <a class="nav-item" data-section="hogares" href="#">
+        <span class="nav-icon" style="background:#eff6ff">🏠</span>
+        Hogares
+        <span class="nav-badge">03</span>
+      </a>
+      <a class="nav-item" data-section="epocas" href="#">
+        <span class="nav-icon" style="background:#fef3c7">📅</span>
+        Épocas
+        <span class="nav-badge">04</span>
+      </a>
+      <a class="nav-item" data-section="tiendas" href="#">
+        <span class="nav-icon" style="background:#ecfdf5">🏪</span>
+        Tiendas
+        <span class="nav-badge">05</span>
+      </a>
+      <a class="nav-item" data-section="lista" href="#">
+        <span class="nav-icon" style="background:#f0fdfa">📋</span>
+        Lista de Compras
+        <span class="nav-badge">06</span>
+      </a>
+      <a class="nav-item" data-section="surtido" href="#">
+        <span class="nav-icon" style="background:#fdf4ff">🛍️</span>
+        Surtido y Compras
+        <span class="nav-badge">07</span>
+      </a>
+      <a class="nav-item" data-section="actividad" href="#">
+        <span class="nav-icon" style="background:#fff7ed">📡</span>
+        Actividad
+        <span class="nav-badge">08</span>
+      </a>
+      <a class="nav-item" data-section="reportes" href="#">
+        <span class="nav-icon" style="background:#f0f9ff">📊</span>
+        Reportes
+        <span class="nav-badge">09</span>
+      </a>
+      <a class="nav-item" data-section="datos" href="#">
+        <span class="nav-icon" style="background:#fdf2f8">🗄️</span>
+        Modelo de Datos
+        <span class="nav-badge">10</span>
+      </a>
+    </div>
+    <div id="search-results" style="display:none"></div>
+  </nav>
+
+  <!-- ===== OVERLAY ===== -->
+  <div id="overlay"></div>
+
+  <!-- ===== MAIN ===== -->
+  <div id="main">
+
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <div class="topbar-breadcrumb">
+        <button id="menu-toggle">☰</button>
+        <span>SúperApp</span>
+        <span class="sep">/</span>
+        <strong id="breadcrumb-current">Visión general</strong>
+      </div>
+      <div class="topbar-actions">
+        <button id="theme-toggle" title="Cambiar tema">🌙</button>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main id="content">
+
+      <!-- ===== OVERVIEW ===== -->
+      <section class="section visible" id="section-overview">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#f0fdfa">🗺️</div>
+          <div>
+            <h1>Visión general</h1>
+            <p>Documentación completa de las reglas de negocio de SúperApp</p>
+          </div>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">💡</span>
+          <div class="callout-body">
+            <strong>¿Qué es SúperApp?</strong>
+            App móvil colaborativa para gestión de compras del hogar. Permite a los miembros compartir una lista de artículos, registrar compras, analizar gastos y clasificar compras por épocas del año.
+          </div>
+        </div>
+
+        <h2>Módulos</h2>
+        <div class="overview-grid">
+          <div class="overview-card" onclick="showSection('auth')">
+            <div class="overview-card-icon">🔐</div>
+            <div class="overview-card-title">Autenticación</div>
+            <div class="overview-card-desc">Registro, login, flujo de acceso y aprobación de usuarios.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('roles')">
+            <div class="overview-card-icon">👥</div>
+            <div class="overview-card-title">Roles y Permisos</div>
+            <div class="overview-card-desc">Diferencias entre admin y member con tabla de permisos.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('hogares')">
+            <div class="overview-card-icon">🏠</div>
+            <div class="overview-card-title">Hogares</div>
+            <div class="overview-card-desc">Unidad de organización que agrupa todos los datos.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('epocas')">
+            <div class="overview-card-icon">📅</div>
+            <div class="overview-card-title">Épocas</div>
+            <div class="overview-card-desc">Periodos recurrentes para clasificar compras por temporada.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('tiendas')">
+            <div class="overview-card-icon">🏪</div>
+            <div class="overview-card-title">Tiendas</div>
+            <div class="overview-card-desc">Catálogo de establecimientos con detección de duplicados.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('lista')">
+            <div class="overview-card-icon">📋</div>
+            <div class="overview-card-title">Lista de Compras</div>
+            <div class="overview-card-desc">Artículos pendientes compartidos con reposición masiva.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('surtido')">
+            <div class="overview-card-icon">🛍️</div>
+            <div class="overview-card-title">Surtido y Compras</div>
+            <div class="overview-card-desc">Flujo de compra con transacción atómica y precio unitario.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('actividad')">
+            <div class="overview-card-icon">📡</div>
+            <div class="overview-card-title">Actividad</div>
+            <div class="overview-card-desc">Feed colaborativo en tiempo real de acciones del hogar.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('reportes')">
+            <div class="overview-card-icon">📊</div>
+            <div class="overview-card-title">Reportes</div>
+            <div class="overview-card-desc">5 tipos de análisis: pendientes, surtidos, tendencia, precios, gasto.</div>
+          </div>
+          <div class="overview-card" onclick="showSection('datos')">
+            <div class="overview-card-icon">🗄️</div>
+            <div class="overview-card-title">Modelo de Datos</div>
+            <div class="overview-card-desc">Esquema completo de colecciones en Firestore.</div>
+          </div>
+        </div>
+
+        <h2>Stack técnico</h2>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Capa</th><th>Tecnología</th></tr></thead>
+              <tbody>
+                <tr><td>Frontend</td><td>React Native / Expo SDK 54</td></tr>
+                <tr><td>Navegación</td><td>Expo Router 6 (file-based)</td></tr>
+                <tr><td>Autenticación</td><td>Firebase Auth (Email/Password)</td></tr>
+                <tr><td>Base de datos</td><td>Cloud Firestore (NoSQL)</td></tr>
+                <tr><td>Lenguaje</td><td>TypeScript</td></tr>
+                <tr><td>Distribución</td><td>EAS Build (APK para Android)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== AUTH ===== -->
+      <section class="section" id="section-auth">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#fff1f2">🔐</div>
+          <div>
+            <h1>Autenticación y Acceso</h1>
+            <p>Registro, inicio de sesión y control de flujo de navegación</p>
+          </div>
+        </div>
+
+        <h2>Registro de usuario</h2>
+        <ul>
+          <li>Requiere <strong>correo electrónico</strong>, <strong>contraseña</strong> (mínimo 6 caracteres) y <strong>nombre</strong>.</li>
+          <li>Al registrarse se crea el documento <code>users/{uid}</code> con <code>role: "member"</code> y <code>approved: false</code>.</li>
+          <li>Si el documento ya existe (login posterior), no se sobreescribe.</li>
+          <li>El <code>displayName</code> usa: campo del formulario → displayName de Auth → parte local del correo → <em>"Usuario"</em>.</li>
+        </ul>
+
+        <h2>Flujo de acceso</h2>
+        <div class="flow">
+          <div class="flow-step">
+            <div class="flow-line"><div class="flow-dot">1</div><div class="flow-connector"></div></div>
+            <div class="flow-content"><strong>Sin sesión</strong><p>Redirige automáticamente a <code>/auth</code></p></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-line"><div class="flow-dot">2</div><div class="flow-connector"></div></div>
+            <div class="flow-content"><strong>Con sesión / <code>approved = false</code></strong><p>Redirige a <code>/pending</code> — pantalla de espera de aprobación</p></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-line"><div class="flow-dot">3</div><div class="flow-connector"></div></div>
+            <div class="flow-content"><strong>Con sesión / <code>approved = true</code></strong><p>Accede a la app principal (<code>/</code>)</p></div>
+          </div>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">⚡</span>
+          <div class="callout-body">
+            <strong>Aprobación en tiempo real</strong>
+            Cuando un admin aprueba al usuario, la app detecta el cambio inmediatamente via <code>onSnapshot</code> y redirige sin necesidad de recargar.
+          </div>
+        </div>
+
+        <h2>Mensajes de error amigables</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Código Firebase</th><th>Mensaje mostrado</th></tr></thead>
+            <tbody>
+              <tr><td><code>auth/invalid-credential</code></td><td>Correo o contraseña incorrectos.</td></tr>
+              <tr><td><code>auth/email-already-in-use</code></td><td>Ese correo ya está registrado.</td></tr>
+              <tr><td><code>auth/invalid-email</code></td><td>Correo no válido.</td></tr>
+              <tr><td><code>auth/weak-password</code></td><td>La contraseña debe tener al menos 6 caracteres.</td></tr>
+              <tr><td><code>auth/too-many-requests</code></td><td>Demasiados intentos. Espera un momento.</td></tr>
+              <tr><td><code>auth/operation-not-allowed</code></td><td>El proveedor Email/Password no está habilitado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Esquema del documento de usuario</h2>
+        <div class="card">
+          <div class="card-title">users / {uid}</div>
+          <div class="schema-field"><span class="schema-name">uid</span><span class="schema-type">string</span><span class="schema-desc">UID de Firebase Auth</span></div>
+          <div class="schema-field"><span class="schema-name">email</span><span class="schema-type">string</span><span class="schema-desc">Correo electrónico</span></div>
+          <div class="schema-field"><span class="schema-name">displayName</span><span class="schema-type">string</span><span class="schema-desc">Nombre visible del usuario</span></div>
+          <div class="schema-field"><span class="schema-name">role</span><span class="schema-type">string</span><span class="schema-desc">"admin" | "member"</span></div>
+          <div class="schema-field"><span class="schema-name">approved</span><span class="schema-type">boolean</span><span class="schema-desc">Si puede acceder a la app</span></div>
+          <div class="schema-field"><span class="schema-name">householdId</span><span class="schema-type">string</span><span class="schema-opt">opcional</span><span class="schema-desc">ID del hogar al que pertenece</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de creación del perfil</span></div>
+        </div>
+      </section>
+
+      <!-- ===== ROLES ===== -->
+      <section class="section" id="section-roles">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#faf5ff">👥</div>
+          <div>
+            <h1>Roles y Permisos</h1>
+            <p>Qué puede hacer cada tipo de usuario en la app</p>
+          </div>
+        </div>
+
+        <h2>Roles disponibles</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Rol</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-amber">member</span></td><td>Rol por defecto al registrarse. Acceso operativo.</td></tr>
+              <tr><td><span class="badge badge-teal">admin</span></td><td>Acceso completo. Requiere además <code>approved = true</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <div class="callout-body">
+            <strong>Condición de admin activo</strong>
+            Un usuario es admin efectivo solo si cumple <em>ambas</em> condiciones: <code>role === "admin"</code> AND <code>approved === true</code>.
+          </div>
+        </div>
+
+        <h2>Tabla de permisos</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Acción</th><th class="center">member</th><th class="center">admin</th></tr></thead>
+            <tbody>
+              <tr><td colspan="3" style="background:var(--slate-100);font-weight:700;font-size:12px;color:var(--slate-500);padding:8px 14px">LISTA DE COMPRAS</td></tr>
+              <tr><td>Ver artículos pendientes</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Agregar artículos</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Editar artículos</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Eliminar artículos</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Surtir (registrar compra)</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td colspan="3" style="background:var(--slate-100);font-weight:700;font-size:12px;color:var(--slate-500);padding:8px 14px">TIENDAS</td></tr>
+              <tr><td>Ver catálogo de tiendas</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Agregar tiendas</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Editar nombre de tienda</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Eliminar tiendas</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td colspan="3" style="background:var(--slate-100);font-weight:700;font-size:12px;color:var(--slate-500);padding:8px 14px">ÉPOCAS</td></tr>
+              <tr><td>Ver épocas</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Crear épocas</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Activar / Desactivar épocas</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Eliminar épocas</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td colspan="3" style="background:var(--slate-100);font-weight:700;font-size:12px;color:var(--slate-500);padding:8px 14px">ADMINISTRACIÓN</td></tr>
+              <tr><td>Ver pantalla de administración</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Crear hogares</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Asignar householdId a usuarios</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Aprobar / Revocar usuarios</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Cambiar rol de usuarios</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Eliminar perfil de usuarios</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Restricciones adicionales</h2>
+        <div class="callout danger">
+          <span class="callout-icon">🚫</span>
+          <div class="callout-body">
+            <strong>Un admin no puede eliminarse a sí mismo</strong>
+            La pantalla de administración bloquea la eliminación del perfil propio del admin conectado.
+          </div>
+        </div>
+        <div class="callout neutral">
+          <span class="callout-icon">ℹ️</span>
+          <div class="callout-body">
+            <strong>Eliminación de cuenta de Auth</strong>
+            Eliminar un usuario desde la app solo borra el documento en Firestore (<code>users/{uid}</code>). La cuenta de Firebase Auth debe eliminarse desde la consola de Firebase.
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== HOGARES ===== -->
+      <section class="section" id="section-hogares">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#eff6ff">🏠</div>
+          <div>
+            <h1>Hogares</h1>
+            <p>Unidad central que agrupa todos los datos del grupo familiar</p>
+          </div>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">🏠</span>
+          <div class="callout-body">
+            <strong>¿Qué es un hogar?</strong>
+            Es la unidad de organización. Todos los datos operativos (lista, tiendas, épocas, compras, actividad) están bajo un hogar y son compartidos entre sus miembros.
+          </div>
+        </div>
+
+        <h2>Reglas de negocio</h2>
+        <ul>
+          <li>Solo un <strong>admin</strong> puede crear hogares.</li>
+          <li>Solo un <strong>admin</strong> puede asignar el <code>householdId</code> a un usuario.</li>
+          <li>Un usuario <strong>sin householdId</strong> no puede ver ni gestionar ningún dato.</li>
+          <li>Un usuario solo pertenece a <strong>un hogar a la vez</strong>.</li>
+          <li>El ID del hogar es un string arbitrario definido por el admin (ej. <code>"casa-sergio"</code>).</li>
+        </ul>
+
+        <h2>Campos del hogar</h2>
+        <div class="card">
+          <div class="card-title">households / {householdId}</div>
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre descriptivo del hogar</span></div>
+          <div class="schema-field"><span class="schema-name">createdByUid</span><span class="schema-type">string</span><span class="schema-desc">UID del admin que lo creó</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de creación</span></div>
+        </div>
+
+        <h2>Estructura de subcolecciones</h2>
+        <pre><code>households/{householdId}/
+  seasons/          Épocas recurrentes
+  stores_catalog/   Catálogo de tiendas
+  list_items/       Artículos pendientes de compra
+  purchases/        Historial de compras realizadas
+  activity/         Registro de actividad reciente</code></pre>
+      </section>
+
+      <!-- ===== EPOCAS ===== -->
+      <section class="section" id="section-epocas">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#fef3c7">📅</div>
+          <div>
+            <h1>Épocas Recurrentes</h1>
+            <p>Periodos del año para clasificar compras por temporada</p>
+          </div>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">🔄</span>
+          <div class="callout-body">
+            <strong>¿Qué son las épocas?</strong>
+            Son periodos con nombre propio (Navidad, Verano, Quincena…) que se repiten cada año. Al registrar una compra, el sistema asigna automáticamente la época vigente.
+          </div>
+        </div>
+
+        <h2>Campos</h2>
+        <div class="card">
+          <div class="card-title">households / {id} / seasons / {seasonId}</div>
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre (ej. "Navidad")</span></div>
+          <div class="schema-field"><span class="schema-name">startMonth</span><span class="schema-type">number</span><span class="schema-desc">Mes de inicio (1–12)</span></div>
+          <div class="schema-field"><span class="schema-name">startDay</span><span class="schema-type">number</span><span class="schema-desc">Día de inicio (1–31)</span></div>
+          <div class="schema-field"><span class="schema-name">endMonth</span><span class="schema-type">number</span><span class="schema-desc">Mes de fin (1–12)</span></div>
+          <div class="schema-field"><span class="schema-name">endDay</span><span class="schema-type">number</span><span class="schema-desc">Día de fin (1–31)</span></div>
+          <div class="schema-field"><span class="schema-name">active</span><span class="schema-type">boolean</span><span class="schema-desc">Si está activa para asignación automática</span></div>
+        </div>
+
+        <h2>Validaciones</h2>
+        <ul>
+          <li>Mes: entero entre <strong>1 y 12</strong>. Día: entero entre <strong>1 y 31</strong>.</li>
+          <li>Nombre no puede estar vacío.</li>
+          <li><strong>Sin nombres duplicados</strong>: se detecta similitud por Levenshtein:
+            <ul>
+              <li>Distancia ≤ 1 si longitud máxima ≤ 6 caracteres.</li>
+              <li>Distancia ≤ 2 si longitud máxima > 6 caracteres.</li>
+              <li>Si hay duplicado se ofrece "Usar existente".</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h2>Épocas que cruzan el año nuevo</h2>
+        <div class="callout warn">
+          <span class="callout-icon">🎄</span>
+          <div class="callout-body">
+            <strong>Ejemplo: Navidad del 15/12 al 02/02</strong>
+            Las épocas pueden cruzar el fin de año. La lógica detecta esto correctamente.
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Caso</th><th>Condición</th><th>Artículo está en época si…</th></tr></thead>
+            <tbody>
+              <tr><td>Mismo año</td><td><code>inicio ≤ fin</code></td><td><code>inicio ≤ hoy ≤ fin</code></td></tr>
+              <tr><td>Cruza año</td><td><code>inicio &gt; fin</code></td><td><code>hoy ≥ inicio</code> <strong>O</strong> <code>hoy ≤ fin</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Asignación automática en compras</h2>
+        <p>Al registrar una compra, el sistema busca la <strong>primera</strong> época con <code>active = true</code> y fechas válidas cuyo rango contenga la fecha actual. Si la encuentra, asigna su <code>seasonId</code> a la compra.</p>
+
+        <h2>Ordenamiento</h2>
+        <p>Las épocas se ordenan por fecha de inicio usando el valor <code>mes × 100 + día</code>.</p>
+      </section>
+
+      <!-- ===== TIENDAS ===== -->
+      <section class="section" id="section-tiendas">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#ecfdf5">🏪</div>
+          <div>
+            <h1>Catálogo de Tiendas</h1>
+            <p>Establecimientos registrados para compras del hogar</p>
+          </div>
+        </div>
+
+        <h2>Campos</h2>
+        <div class="card">
+          <div class="card-title">households / {id} / stores_catalog / {storeId}</div>
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre de la tienda (ej. "Soriana")</span></div>
+          <div class="schema-field"><span class="schema-name">normalizedName</span><span class="schema-type">string</span><span class="schema-desc">Nombre en minúsculas (para búsqueda y orden)</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de alta en el catálogo</span></div>
+          <div class="schema-field"><span class="schema-name">lastUsedAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Última vez usada en una compra</span></div>
+        </div>
+
+        <h2>Detección de duplicados</h2>
+        <p>Al crear o editar una tienda, se verifica similitud en este orden:</p>
+        <ol>
+          <li>Nombres normalizados exactamente iguales.</li>
+          <li>Nombres sin espacios exactamente iguales.</li>
+          <li>Uno contiene al otro y el nombre más corto tiene ≥ 5 caracteres.</li>
+          <li>Distancia Levenshtein ≤ 1 si longitud ≤ 6 caracteres, o ≤ 2 si > 6.</li>
+        </ol>
+        <div class="callout info">
+          <span class="callout-icon">💡</span>
+          <div class="callout-body">Si se detecta un posible duplicado, se advierte al usuario y se ofrece "Usar existente" para apuntar a la tienda ya registrada.</div>
+        </div>
+
+        <h2>Permisos</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Acción</th><th class="center">member</th><th class="center">admin</th></tr></thead>
+            <tbody>
+              <tr><td>Ver catálogo</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Agregar tienda</td><td class="center"><span class="check">✓</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Editar nombre</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+              <tr><td>Eliminar tienda</td><td class="center"><span class="cross">—</span></td><td class="center"><span class="check">✓</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Notas adicionales</h2>
+        <ul>
+          <li>Ordenadas alfabéticamente por <code>normalizedName</code>.</li>
+          <li>Al confirmar una compra se actualiza automáticamente <code>lastUsedAt</code> de la tienda seleccionada.</li>
+        </ul>
+      </section>
+
+      <!-- ===== LISTA ===== -->
+      <section class="section" id="section-lista">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#f0fdfa">📋</div>
+          <div>
+            <h1>Lista de Compras Pendientes</h1>
+            <p>Artículos que el hogar necesita comprar, compartidos en tiempo real</p>
+          </div>
+        </div>
+
+        <h2>Campos de un artículo</h2>
+        <div class="card">
+          <div class="card-title">households / {id} / list_items / {itemId}</div>
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre (ej. "Leche")</span></div>
+          <div class="schema-field"><span class="schema-name">normalizedName</span><span class="schema-type">string</span><span class="schema-desc">Nombre en minúsculas sin acentos</span></div>
+          <div class="schema-field"><span class="schema-name">quantity</span><span class="schema-type">number</span><span class="schema-desc">Cantidad a comprar — debe ser &gt; 0</span></div>
+          <div class="schema-field"><span class="schema-name">estimatedPrice</span><span class="schema-type">number</span><span class="schema-opt">opcional</span><span class="schema-desc">Precio estimado total (≥ 0)</span></div>
+          <div class="schema-field"><span class="schema-name">estimatedUnitPrice</span><span class="schema-type">number</span><span class="schema-opt">opcional</span><span class="schema-desc">estimatedPrice ÷ quantity</span></div>
+          <div class="schema-field"><span class="schema-name">preferredStoreId</span><span class="schema-type">string</span><span class="schema-opt">opcional</span><span class="schema-desc">ID de tienda preferida</span></div>
+          <div class="schema-field"><span class="schema-name">preferredStoreName</span><span class="schema-type">string</span><span class="schema-opt">opcional</span><span class="schema-desc">Nombre de tienda preferida</span></div>
+          <div class="schema-field"><span class="schema-name">addedByUid</span><span class="schema-type">string</span><span class="schema-desc">UID del usuario que lo agregó</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de creación</span></div>
+          <div class="schema-field"><span class="schema-name">updatedAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de última modificación</span></div>
+        </div>
+
+        <h2>Validaciones al agregar</h2>
+        <ul>
+          <li>Nombre no puede estar vacío.</li>
+          <li>Cantidad: número finito <strong>&gt; 0</strong>.</li>
+          <li>Precio estimado (si se proporciona): número finito <strong>≥ 0</strong>.</li>
+          <li><strong>Sin duplicados</strong>: no se puede agregar un artículo con el mismo <code>normalizedName</code> que uno ya en la lista.</li>
+        </ul>
+
+        <h2>Edición de artículos</h2>
+        <ul>
+          <li>Al editar se <strong>conserva el <code>addedByUid</code> original</strong>.</li>
+          <li>Si el precio se deja vacío, se eliminan <code>estimatedPrice</code> y <code>estimatedUnitPrice</code> del documento.</li>
+          <li>Si la tienda preferida se deja vacía, se eliminan <code>preferredStoreId</code> y <code>preferredStoreName</code>.</li>
+        </ul>
+
+        <h2>Sugerencias de autocompletado</h2>
+        <p>Al escribir el nombre de un artículo se muestran hasta 6 sugerencias de dos fuentes:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fuente</th><th>Datos pre-rellenados</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-amber">pending</span> Artículos ya en la lista</td><td>Abre en modo edición del artículo existente</td></tr>
+              <tr><td><span class="badge badge-teal">supplied</span> Historial de compras</td><td>Cantidad, precio y tienda de la última compra</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Reposición masiva</h2>
+        <div class="callout info">
+          <span class="callout-icon">🔁</span>
+          <div class="callout-body">
+            <strong>¿Qué es la reposición?</strong>
+            Permite agregar varios artículos a la vez desde el historial de compras anteriores, seleccionándolos en una sola operación (batch).
+          </div>
+        </div>
+        <ul>
+          <li>Se puede buscar y filtrar los candidatos por nombre.</li>
+          <li>Artículos ya en la lista se <strong>omiten silenciosamente</strong> (sin error).</li>
+          <li>El usuario elige si incluir el <strong>último precio pagado</strong> como estimado.</li>
+          <li>Si se usa el último precio, también se asigna la <strong>tienda preferida</strong> de esa compra.</li>
+          <li>Se usa <code>writeBatch</code> para escribir todo en una sola operación atómica.</li>
+        </ul>
+      </section>
+
+      <!-- ===== SURTIDO ===== -->
+      <section class="section" id="section-surtido">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#fdf4ff">🛍️</div>
+          <div>
+            <h1>Surtido y Registro de Compras</h1>
+            <p>Flujo de compra con transacción atómica en Firestore</p>
+          </div>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">⚛️</span>
+          <div class="callout-body">
+            <strong>Operación atómica</strong>
+            El surtido usa una <code>runTransaction</code> de Firestore: el artículo se elimina de la lista y la compra se registra en una sola operación. Si algo falla, todo se revierte.
+          </div>
+        </div>
+
+        <h2>Flujo al surtir</h2>
+        <div class="flow">
+          <div class="flow-step">
+            <div class="flow-line"><div class="flow-dot">1</div><div class="flow-connector"></div></div>
+            <div class="flow-content"><strong>Usuario presiona "Surtir"</strong><p>Se abre un modal con la tienda pre-seleccionada y el precio estimado pre-rellenado.</p></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-line"><div class="flow-dot">2</div><div class="flow-connector"></div></div>
+            <div class="flow-content"><strong>Usuario selecciona tienda y precio</strong><p>Tienda preferida del artículo o primera del catálogo. Precio estimado como referencia.</p></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-line"><div class="flow-dot">3</div><div class="flow-connector"></div></div>
+            <div class="flow-content"><strong>Transacción Firestore</strong><p>Verifica que el artículo exista → crea registro en <code>purchases/</code> → elimina de <code>list_items/</code> → actualiza <code>lastUsedAt</code> de la tienda.</p></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-line"><div class="flow-dot">4</div><div class="flow-connector"></div></div>
+            <div class="flow-content"><strong>Registro de actividad</strong><p>Se anota un evento "supplied" en <code>activity/</code>. Si falla, no revierte la compra.</p></div>
+          </div>
+        </div>
+
+        <h2>Validaciones</h2>
+        <ul>
+          <li>Debe seleccionarse una tienda <strong>válida</strong> (que exista en el catálogo).</li>
+          <li>Precio pagado: número finito <strong>≥ 0</strong>.</li>
+        </ul>
+
+        <h2>Campos del registro de compra</h2>
+        <div class="card">
+          <div class="card-title">households / {id} / purchases / {purchaseId}</div>
+          <div class="schema-field"><span class="schema-name">listItemId</span><span class="schema-type">string</span><span class="schema-desc">ID del artículo pendiente que se surtió</span></div>
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre del artículo</span></div>
+          <div class="schema-field"><span class="schema-name">normalizedName</span><span class="schema-type">string</span><span class="schema-desc">Nombre normalizado</span></div>
+          <div class="schema-field"><span class="schema-name">quantity</span><span class="schema-type">number</span><span class="schema-desc">Cantidad comprada</span></div>
+          <div class="schema-field"><span class="schema-name">pricePaid</span><span class="schema-type">number</span><span class="schema-desc">Precio total pagado (≥ 0)</span></div>
+          <div class="schema-field"><span class="schema-name">unitPricePaid</span><span class="schema-type">number</span><span class="schema-desc">pricePaid ÷ quantity</span></div>
+          <div class="schema-field"><span class="schema-name">storeId</span><span class="schema-type">string</span><span class="schema-desc">ID de la tienda donde se compró</span></div>
+          <div class="schema-field"><span class="schema-name">storeName</span><span class="schema-type">string</span><span class="schema-desc">Nombre de la tienda</span></div>
+          <div class="schema-field"><span class="schema-name">purchasedByUid</span><span class="schema-type">string</span><span class="schema-desc">UID del usuario que realizó la compra</span></div>
+          <div class="schema-field"><span class="schema-name">purchasedAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha y hora de la compra</span></div>
+          <div class="schema-field"><span class="schema-name">seasonId</span><span class="schema-type">string</span><span class="schema-opt">opcional</span><span class="schema-desc">ID de la época vigente (asignado automáticamente)</span></div>
+        </div>
+
+        <h2>Fuente de datos en la transacción</h2>
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <div class="callout-body">Los valores de <code>name</code>, <code>normalizedName</code> y <code>quantity</code> se toman del snapshot actual en Firestore <em>dentro de la transacción</em>, no del estado local, para garantizar consistencia ante cambios concurrentes.</div>
+        </div>
+      </section>
+
+      <!-- ===== ACTIVIDAD ===== -->
+      <section class="section" id="section-actividad">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#fff7ed">📡</div>
+          <div>
+            <h1>Feed de Actividad</h1>
+            <p>Registro en tiempo real de las acciones del hogar</p>
+          </div>
+        </div>
+
+        <h2>Tipos de evento</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tipo</th><th>Cuándo se genera</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-teal">added</span></td><td>Cuando un usuario agrega un artículo nuevo a la lista</td></tr>
+              <tr><td><span class="badge badge-amber">supplied</span></td><td>Cuando un usuario surte (compra) un artículo</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Campos del evento</h2>
+        <div class="card">
+          <div class="card-title">households / {id} / activity / {eventId}</div>
+          <div class="schema-field"><span class="schema-name">type</span><span class="schema-type">string</span><span class="schema-desc">"added" | "supplied"</span></div>
+          <div class="schema-field"><span class="schema-name">itemName</span><span class="schema-type">string</span><span class="schema-desc">Nombre del artículo afectado</span></div>
+          <div class="schema-field"><span class="schema-name">actorUid</span><span class="schema-type">string</span><span class="schema-desc">UID del usuario que realizó la acción</span></div>
+          <div class="schema-field"><span class="schema-name">actorName</span><span class="schema-type">string</span><span class="schema-desc">Nombre visible del usuario</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha y hora del evento</span></div>
+        </div>
+
+        <h2>Reglas de notificación</h2>
+        <ul>
+          <li>Solo se muestra notificación de eventos <strong>de otros usuarios</strong>. Las propias acciones no generan aviso.</li>
+          <li>Formato: <em>"[Nombre] agregó/surtió: [Artículo]"</em></li>
+          <li>La notificación desaparece automáticamente después de <strong>4,500 ms</strong>.</li>
+        </ul>
+
+        <h2>Límites y comportamiento</h2>
+        <ul>
+          <li>Se cargan los últimos <strong>12 eventos</strong> ordenados por fecha descendente.</li>
+          <li>El listener es en tiempo real (<code>onSnapshot</code>): las actualizaciones llegan inmediatamente.</li>
+          <li>Si el registro de actividad falla, la operación principal (agregar/surtir) <strong>no se revierte</strong>. El error solo queda en consola.</li>
+        </ul>
+      </section>
+
+      <!-- ===== REPORTES ===== -->
+      <section class="section" id="section-reportes">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#f0f9ff">📊</div>
+          <div>
+            <h1>Reportes</h1>
+            <p>5 tipos de análisis sobre compras y artículos del hogar</p>
+          </div>
+        </div>
+
+        <div class="callout neutral">
+          <span class="callout-icon">ℹ️</span>
+          <div class="callout-body">Los filtros de todos los reportes se aplican <strong>localmente</strong> sobre los datos ya cargados desde Firestore, sin generar nuevas consultas al servidor.</div>
+        </div>
+
+        <h2>1. Pendientes</h2>
+        <p>Artículos actualmente en la lista de compras.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Filtro</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>Rango de fechas</td><td>Por fecha de creación del artículo (Desde / Hasta)</td></tr>
+              <tr><td>Nombre</td><td>Búsqueda parcial normalizada</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>2. Surtidos</h2>
+        <p>Historial completo de compras realizadas.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Filtro</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>Rango de fechas</td><td>Por fecha de compra (Desde / Hasta)</td></tr>
+              <tr><td>Tienda</td><td>Selección de una tienda del catálogo</td></tr>
+              <tr><td>Época</td><td>Selección de una época configurada</td></tr>
+              <tr><td>Nombre</td><td>Búsqueda parcial normalizada</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>3. Tendencia de precio</h2>
+        <p>Variación del precio promedio por unidad de un artículo a lo largo del tiempo, agrupado por mes.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Filtro</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>Artículo</td><td>Búsqueda parcial; debe seleccionarse una sugerencia</td></tr>
+              <tr><td>Tiendas</td><td>Multi-selección de tiendas del catálogo</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout neutral">
+          <span class="callout-icon">📐</span>
+          <div class="callout-body"><strong>Cálculo:</strong> Para cada mes (<code>YYYY-MM</code>) se promedia el <code>unitPricePaid</code> de todas las compras del artículo que correspondan a las tiendas seleccionadas.</div>
+        </div>
+
+        <h2>4. Mejor precio</h2>
+        <p>¿En qué tienda se encontró el menor precio unitario para un artículo?</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Filtro</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>Artículo</td><td>Búsqueda parcial; debe seleccionarse una sugerencia</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Muestra por tienda: precio unitario más bajo, precio total correspondiente, cantidad y fecha. Ordenado de menor a mayor precio unitario.</p>
+
+        <h2>5. Gasto por tienda</h2>
+        <p>Gasto total acumulado por establecimiento en un periodo.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Filtro</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>Rango de fechas</td><td>Desde / Hasta</td></tr>
+              <tr><td>Época</td><td>Selección de una época configurada</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Muestra por tienda: total gastado, número de compras, cantidad total. Ordenado de mayor a menor gasto.</p>
+
+        <div class="divider"></div>
+
+        <h2>Selector de fechas</h2>
+        <ul>
+          <li>Formato de entrada: <code>YYYY-MM-DD</code>.</li>
+          <li>Hay un calendario integrado para elegir la fecha.</li>
+          <li>El límite "Desde" usa inicio del día (<code>00:00:00</code>); "Hasta" usa fin del día (<code>23:59:59</code>).</li>
+          <li>Si el campo está vacío, no se aplica ese límite del rango.</li>
+        </ul>
+      </section>
+
+      <!-- ===== DATOS ===== -->
+      <section class="section" id="section-datos">
+        <div class="section-hero">
+          <div class="section-hero-icon" style="background:#fdf2f8">🗄️</div>
+          <div>
+            <h1>Modelo de Datos</h1>
+            <p>Esquema completo de colecciones en Cloud Firestore</p>
+          </div>
+        </div>
+
+        <h2>Estructura jerárquica</h2>
+        <pre><code>users/
+  {uid}/                      Perfil del usuario
+
+households/
+  {householdId}/              Datos del hogar
+    seasons/
+      {seasonId}/             Época recurrente
+    stores_catalog/
+      {storeId}/              Tienda del catálogo
+    list_items/
+      {itemId}/               Artículo pendiente
+    purchases/
+      {purchaseId}/           Compra realizada
+    activity/
+      {eventId}/              Evento de actividad</code></pre>
+
+        <h2>users / {uid}</h2>
+        <div class="card">
+          <div class="schema-field"><span class="schema-name">uid</span><span class="schema-type">string</span><span class="schema-desc">UID de Firebase Auth</span></div>
+          <div class="schema-field"><span class="schema-name">email</span><span class="schema-type">string</span><span class="schema-desc">Correo electrónico</span></div>
+          <div class="schema-field"><span class="schema-name">displayName</span><span class="schema-type">string</span><span class="schema-desc">Nombre visible del usuario</span></div>
+          <div class="schema-field"><span class="schema-name">role</span><span class="schema-type">string</span><span class="schema-desc">"admin" | "member"</span></div>
+          <div class="schema-field"><span class="schema-name">approved</span><span class="schema-type">boolean</span><span class="schema-desc">Si puede acceder a la app</span></div>
+          <div class="schema-field"><span class="schema-name">householdId</span><span class="schema-type">string</span><span class="schema-opt">opcional</span><span class="schema-desc">ID del hogar al que pertenece</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de creación del perfil</span></div>
+        </div>
+
+        <h2>households / {householdId}</h2>
+        <div class="card">
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre descriptivo del hogar</span></div>
+          <div class="schema-field"><span class="schema-name">createdByUid</span><span class="schema-type">string</span><span class="schema-desc">UID del admin que lo creó</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de creación</span></div>
+        </div>
+
+        <h2>…/seasons / {seasonId}</h2>
+        <div class="card">
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre de la época</span></div>
+          <div class="schema-field"><span class="schema-name">startMonth</span><span class="schema-type">number</span><span class="schema-desc">Mes de inicio (1–12)</span></div>
+          <div class="schema-field"><span class="schema-name">startDay</span><span class="schema-type">number</span><span class="schema-desc">Día de inicio (1–31)</span></div>
+          <div class="schema-field"><span class="schema-name">endMonth</span><span class="schema-type">number</span><span class="schema-desc">Mes de fin (1–12)</span></div>
+          <div class="schema-field"><span class="schema-name">endDay</span><span class="schema-type">number</span><span class="schema-desc">Día de fin (1–31)</span></div>
+          <div class="schema-field"><span class="schema-name">active</span><span class="schema-type">boolean</span><span class="schema-desc">Si está activa para asignación automática</span></div>
+        </div>
+
+        <h2>…/stores_catalog / {storeId}</h2>
+        <div class="card">
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre de la tienda</span></div>
+          <div class="schema-field"><span class="schema-name">normalizedName</span><span class="schema-type">string</span><span class="schema-desc">Nombre en minúsculas</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de alta</span></div>
+          <div class="schema-field"><span class="schema-name">lastUsedAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Última vez usada en una compra</span></div>
+        </div>
+
+        <h2>…/list_items / {itemId}</h2>
+        <div class="card">
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre del artículo</span></div>
+          <div class="schema-field"><span class="schema-name">normalizedName</span><span class="schema-type">string</span><span class="schema-desc">Nombre normalizado</span></div>
+          <div class="schema-field"><span class="schema-name">quantity</span><span class="schema-type">number</span><span class="schema-desc">Cantidad (&gt; 0)</span></div>
+          <div class="schema-field"><span class="schema-name">estimatedPrice</span><span class="schema-type">number</span><span class="schema-opt">opcional</span><span class="schema-desc">Precio estimado total (≥ 0)</span></div>
+          <div class="schema-field"><span class="schema-name">estimatedUnitPrice</span><span class="schema-type">number</span><span class="schema-opt">opcional</span><span class="schema-desc">estimatedPrice ÷ quantity</span></div>
+          <div class="schema-field"><span class="schema-name">preferredStoreId</span><span class="schema-type">string</span><span class="schema-opt">opcional</span><span class="schema-desc">ID de tienda preferida</span></div>
+          <div class="schema-field"><span class="schema-name">preferredStoreName</span><span class="schema-type">string</span><span class="schema-opt">opcional</span><span class="schema-desc">Nombre de tienda preferida</span></div>
+          <div class="schema-field"><span class="schema-name">addedByUid</span><span class="schema-type">string</span><span class="schema-desc">UID del usuario que lo agregó</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de creación</span></div>
+          <div class="schema-field"><span class="schema-name">updatedAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha de última modificación</span></div>
+        </div>
+
+        <h2>…/purchases / {purchaseId}</h2>
+        <div class="card">
+          <div class="schema-field"><span class="schema-name">listItemId</span><span class="schema-type">string</span><span class="schema-desc">ID del artículo pendiente surtido</span></div>
+          <div class="schema-field"><span class="schema-name">name</span><span class="schema-type">string</span><span class="schema-desc">Nombre del artículo</span></div>
+          <div class="schema-field"><span class="schema-name">normalizedName</span><span class="schema-type">string</span><span class="schema-desc">Nombre normalizado</span></div>
+          <div class="schema-field"><span class="schema-name">quantity</span><span class="schema-type">number</span><span class="schema-desc">Cantidad comprada</span></div>
+          <div class="schema-field"><span class="schema-name">pricePaid</span><span class="schema-type">number</span><span class="schema-desc">Precio total pagado (≥ 0)</span></div>
+          <div class="schema-field"><span class="schema-name">unitPricePaid</span><span class="schema-type">number</span><span class="schema-desc">pricePaid ÷ quantity</span></div>
+          <div class="schema-field"><span class="schema-name">storeId</span><span class="schema-type">string</span><span class="schema-desc">ID de la tienda</span></div>
+          <div class="schema-field"><span class="schema-name">storeName</span><span class="schema-type">string</span><span class="schema-desc">Nombre de la tienda</span></div>
+          <div class="schema-field"><span class="schema-name">purchasedByUid</span><span class="schema-type">string</span><span class="schema-desc">UID del usuario que compró</span></div>
+          <div class="schema-field"><span class="schema-name">purchasedAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha y hora de la compra</span></div>
+          <div class="schema-field"><span class="schema-name">seasonId</span><span class="schema-type">string</span><span class="schema-opt">opcional</span><span class="schema-desc">Época vigente al momento de comprar</span></div>
+        </div>
+
+        <h2>…/activity / {eventId}</h2>
+        <div class="card">
+          <div class="schema-field"><span class="schema-name">type</span><span class="schema-type">string</span><span class="schema-desc">"added" | "supplied"</span></div>
+          <div class="schema-field"><span class="schema-name">itemName</span><span class="schema-type">string</span><span class="schema-desc">Nombre del artículo afectado</span></div>
+          <div class="schema-field"><span class="schema-name">actorUid</span><span class="schema-type">string</span><span class="schema-desc">UID del usuario</span></div>
+          <div class="schema-field"><span class="schema-name">actorName</span><span class="schema-type">string</span><span class="schema-desc">Nombre visible del usuario</span></div>
+          <div class="schema-field"><span class="schema-name">createdAt</span><span class="schema-type">Timestamp</span><span class="schema-desc">Fecha y hora del evento</span></div>
+        </div>
+
+        <h2>Límites de consulta</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Colección</th><th>Límite de documentos cargados</th></tr></thead>
+            <tbody>
+              <tr><td>purchases</td><td>250 más recientes</td></tr>
+              <tr><td>activity</td><td>12 más recientes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /#main -->
+</div><!-- /#app -->
+
+<script>
+  // ===== DATA =====
+  const sections = [
+    { id: 'overview',  label: 'Visión general',     keywords: ['overview','visión','general','superapp','stack','firebase','expo','react native'] },
+    { id: 'auth',      label: 'Autenticación',       keywords: ['auth','autenticación','registro','login','sesión','contraseña','aprobación','approved','uid','correo','email','usuario'] },
+    { id: 'roles',     label: 'Roles y Permisos',    keywords: ['rol','roles','permisos','admin','member','acceso','tabla','permiso'] },
+    { id: 'hogares',   label: 'Hogares',             keywords: ['hogar','household','householdid','familia','subcolección'] },
+    { id: 'epocas',    label: 'Épocas',              keywords: ['epoca','épocas','season','temporada','navidad','recurrente','levenshtein','duplicado'] },
+    { id: 'tiendas',   label: 'Tiendas',             keywords: ['tienda','store','catálogo','catalog','soriana','supermercado','duplicado'] },
+    { id: 'lista',     label: 'Lista de Compras',    keywords: ['lista','artículo','pendiente','list_items','reposición','autocompletado','cantidad','precio','estimado'] },
+    { id: 'surtido',   label: 'Surtido y Compras',   keywords: ['surtir','surtido','compra','purchase','transacción','transaction','precio','unitario','tienda'] },
+    { id: 'actividad', label: 'Actividad',           keywords: ['actividad','activity','feed','evento','notificación','tiempo real','onsnapshot','added','supplied'] },
+    { id: 'reportes',  label: 'Reportes',            keywords: ['reporte','análisis','tendencia','gasto','mejor precio','pendientes','surtidos','filtro','fecha'] },
+    { id: 'datos',     label: 'Modelo de Datos',     keywords: ['firestore','modelo','datos','esquema','colección','campo','timestamp','schema'] },
+  ];
+
+  // ===== NAVIGATION =====
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+    document.querySelectorAll('.nav-item').forEach(a => a.classList.remove('active'));
+
+    const sec = document.getElementById('section-' + id);
+    if (sec) sec.classList.add('visible');
+
+    const navItem = document.querySelector('[data-section="' + id + '"]');
+    if (navItem) navItem.classList.add('active');
+
+    const section = sections.find(s => s.id === id);
+    document.getElementById('breadcrumb-current').textContent = section ? section.label : '';
+
+    // close mobile sidebar
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', e => {
+      e.preventDefault();
+      showSection(item.dataset.section);
+    });
+  });
+
+  // ===== SEARCH =====
+  const searchInput  = document.getElementById('search-input');
+  const navLinks     = document.getElementById('nav-links');
+  const searchResults = document.getElementById('search-results');
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) {
+      navLinks.style.display = '';
+      searchResults.style.display = 'none';
+      return;
+    }
+
+    navLinks.style.display = 'none';
+    searchResults.style.display = '';
+
+    const matches = sections.filter(s =>
+      s.label.toLowerCase().includes(q) ||
+      s.keywords.some(k => k.includes(q))
+    );
+
+    if (matches.length === 0) {
+      searchResults.innerHTML = '<p style="padding:12px;color:var(--slate-500);font-size:13px">Sin resultados.</p>';
+      return;
+    }
+
+    searchResults.innerHTML = matches.map(s => `
+      <div class="search-result-item" onclick="showSection('${s.id}'); document.getElementById('search-input').value=''; document.getElementById('nav-links').style.display=''; document.getElementById('search-results').style.display='none'">
+        <div class="sr-title">${highlight(s.label, q)}</div>
+        <div class="sr-desc">${s.keywords.filter(k => k.includes(q)).slice(0,4).join(', ')}</div>
+      </div>
+    `).join('');
+  });
+
+  function highlight(text, q) {
+    const i = text.toLowerCase().indexOf(q);
+    if (i === -1) return text;
+    return text.slice(0, i) + '<mark>' + text.slice(i, i + q.length) + '</mark>' + text.slice(i + q.length);
+  }
+
+  // ===== DARK MODE =====
+  const themeToggle = document.getElementById('theme-toggle');
+  const html = document.documentElement;
+  let dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  function applyTheme() {
+    html.dataset.theme = dark ? 'dark' : 'light';
+    themeToggle.textContent = dark ? '☀️' : '🌙';
+  }
+  applyTheme();
+
+  themeToggle.addEventListener('click', () => {
+    dark = !dark;
+    applyTheme();
+  });
+
+  // ===== MOBILE MENU =====
+  const menuToggle = document.getElementById('menu-toggle');
+  const sidebar    = document.getElementById('sidebar');
+  const overlay    = document.getElementById('overlay');
+
+  menuToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+  });
+</script>
+</body>
+</html>

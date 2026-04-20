@@ -3,14 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -78,7 +77,7 @@ export default function AuthScreen() {
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [errorText, setErrorText] = useState("");
-  const [currentEmail, setCurrentEmail] = useState<string | null>(auth.currentUser?.email ?? null);
+  const [currentEmail, setCurrentEmail] = useState<string | null>(auth?.currentUser?.email ?? null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
